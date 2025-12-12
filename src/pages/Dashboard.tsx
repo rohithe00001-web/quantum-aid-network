@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Truck,
@@ -8,12 +9,14 @@ import {
   MapPin,
   Clock,
   CheckCircle2,
+  Key,
+  ExternalLink,
 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { StatusIndicator } from "@/components/ui/StatusIndicator";
-import { QuantumLoader } from "@/components/ui/QuantumLoader";
+import { OperationsMap } from "@/components/map/OperationsMap";
 
 const recentOperations = [
   {
@@ -52,7 +55,32 @@ const activeAlerts = [
   { id: 3, level: "info", message: "New satellite imagery available", time: "18m" },
 ];
 
+const mapMarkers = [
+  { id: "v1", lng: -118.2437, lat: 34.0522, type: "vehicle" as const, label: "Alpha-7 En Route" },
+  { id: "v2", lng: -122.4194, lat: 37.7749, type: "vehicle" as const, label: "Bravo-3 Active" },
+  { id: "s1", lng: -117.1611, lat: 32.7157, type: "shelter" as const, label: "Emergency Shelter A" },
+  { id: "s2", lng: -121.8863, lat: 37.3382, type: "shelter" as const, label: "Community Center" },
+  { id: "a1", lng: -119.4179, lat: 36.7783, type: "alert" as const, label: "Flash Flood Zone" },
+  { id: "r1", lng: -116.2023, lat: 33.8303, type: "resource" as const, label: "Supply Depot" },
+];
+
 export default function Dashboard() {
+  const [mapboxToken, setMapboxToken] = useState("");
+  const [showTokenInput, setShowTokenInput] = useState(false);
+
+  // Load token from localStorage
+  useEffect(() => {
+    const savedToken = localStorage.getItem("mapbox_token");
+    if (savedToken) {
+      setMapboxToken(savedToken);
+    }
+  }, []);
+
+  const handleSaveToken = () => {
+    localStorage.setItem("mapbox_token", mapboxToken);
+    setShowTokenInput(false);
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -124,76 +152,60 @@ export default function Dashboard() {
                   Live fleet and resource positioning
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <StatusIndicator status="online" label="Live" />
+              <div className="flex items-center gap-3">
+                <StatusIndicator status={mapboxToken ? "online" : "offline"} label={mapboxToken ? "Live" : "Offline"} />
+                <button
+                  onClick={() => setShowTokenInput(!showTokenInput)}
+                  className="p-2 rounded-lg hover:bg-secondary/50 transition-colors"
+                  title="Configure Mapbox Token"
+                >
+                  <Key className="w-4 h-4 text-muted-foreground" />
+                </button>
               </div>
             </div>
-            <div className="relative h-80 bg-gradient-to-br from-secondary/50 to-background">
-              {/* Simulated Map Grid */}
-              <div className="absolute inset-0 grid-pattern opacity-50" />
-              
-              {/* Animated Points */}
-              {[
-                { x: "20%", y: "30%", color: "primary" },
-                { x: "45%", y: "50%", color: "success" },
-                { x: "70%", y: "25%", color: "warning" },
-                { x: "55%", y: "70%", color: "primary" },
-                { x: "30%", y: "60%", color: "success" },
-              ].map((point, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute"
-                  style={{ left: point.x, top: point.y }}
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: i * 0.2 }}
-                >
-                  <div className={`relative`}>
-                    <MapPin className={`w-6 h-6 text-${point.color}`} />
-                    <motion.div
-                      className={`absolute inset-0 bg-${point.color}/30 rounded-full -z-10`}
-                      animate={{ scale: [1, 2, 1], opacity: [0.5, 0, 0.5] }}
-                      transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
+            
+            {/* Token Input */}
+            {showTokenInput && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="p-4 border-b border-border bg-secondary/30"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <label className="text-xs text-muted-foreground mb-1 block">
+                      Mapbox Public Token
+                    </label>
+                    <input
+                      type="text"
+                      value={mapboxToken}
+                      onChange={(e) => setMapboxToken(e.target.value)}
+                      placeholder="pk.eyJ1Ijoi..."
+                      className="w-full h-9 px-3 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
-                </motion.div>
-              ))}
-
-              {/* Route Lines */}
-              <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                <motion.path
-                  d="M 80 100 Q 200 80 280 160"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth="2"
-                  strokeDasharray="8 4"
-                  fill="none"
-                  opacity="0.5"
-                  initial={{ pathLength: 0 }}
-                  animate={{ pathLength: 1 }}
-                  transition={{ duration: 2, ease: "easeInOut" }}
-                />
-                <motion.path
-                  d="M 280 160 Q 350 200 420 140"
-                  stroke="hsl(var(--success))"
-                  strokeWidth="2"
-                  strokeDasharray="8 4"
-                  fill="none"
-                  opacity="0.5"
-                  initial={{ pathLength: 0 }}
-                  animate={{ pathLength: 1 }}
-                  transition={{ duration: 2, delay: 0.5, ease: "easeInOut" }}
-                />
-              </svg>
-
-              {/* Quantum Processing Overlay */}
-              <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
-                <div className="px-3 py-2 bg-background/80 backdrop-blur-sm rounded-lg border border-border">
-                  <span className="font-mono text-xs text-muted-foreground">
-                    Quantum optimization active
-                  </span>
+                  <button
+                    onClick={handleSaveToken}
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium mt-5"
+                  >
+                    Save
+                  </button>
                 </div>
-                <QuantumLoader size="sm" />
-              </div>
+                <a
+                  href="https://account.mapbox.com/access-tokens/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-2"
+                >
+                  Get your token from Mapbox
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </motion.div>
+            )}
+
+            <div className="relative h-80">
+              <OperationsMap mapboxToken={mapboxToken} markers={mapMarkers} />
             </div>
           </GlassCard>
 

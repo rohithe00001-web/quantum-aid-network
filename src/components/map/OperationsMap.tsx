@@ -1,6 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
 import { MapPin, AlertTriangle } from 'lucide-react';
 
 interface OperationsMapProps {
@@ -14,75 +12,86 @@ interface OperationsMapProps {
   }[];
 }
 
-export function OperationsMap({ mapboxToken, markers = [] }: OperationsMapProps) {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const markersRef = useRef<mapboxgl.Marker[]>([]);
-  const [mapError, setMapError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!mapContainer.current || !mapboxToken) return;
-
-    // Check for WebGL support before initializing
+// Check WebGL support once
+const checkWebGLSupport = (): boolean => {
+  try {
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-    if (!gl) {
-      setMapError('WebGL is not supported in this browser. Please try a different browser or enable hardware acceleration.');
-      return;
-    }
+    return !!gl;
+  } catch {
+    return false;
+  }
+};
 
-    try {
-      mapboxgl.accessToken = mapboxToken;
+const webGLSupported = checkWebGLSupport();
 
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/dark-v11',
-        center: [-95.7129, 37.0902],
-        zoom: 4,
-        pitch: 30,
-      });
+export function OperationsMap({ mapboxToken, markers = [] }: OperationsMapProps) {
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
+  const [mapReady, setMapReady] = useState(false);
+  const mapboxglRef = useRef<any>(null);
 
-      map.current.on('error', (e) => {
-        console.error('Mapbox error:', e);
-        setMapError('Map failed to load. Please check your Mapbox token.');
-      });
+  useEffect(() => {
+    if (!mapContainer.current || !mapboxToken || !webGLSupported) return;
 
-      map.current.addControl(
-        new mapboxgl.NavigationControl({
-          visualizePitch: true,
-        }),
-        'top-right'
-      );
+    let isMounted = true;
 
-      map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-left');
+    import('mapbox-gl').then((mapboxgl) => {
+      if (!isMounted || !mapContainer.current) return;
 
-      map.current.on('style.load', () => {
-        map.current?.setFog({
-          color: 'rgb(10, 15, 25)',
-          'high-color': 'rgb(20, 30, 50)',
-          'horizon-blend': 0.1,
+      // Import CSS
+      import('mapbox-gl/dist/mapbox-gl.css');
+      
+      mapboxglRef.current = mapboxgl.default;
+      mapboxgl.default.accessToken = mapboxToken;
+
+      try {
+        map.current = new mapboxgl.default.Map({
+          container: mapContainer.current,
+          style: 'mapbox://styles/mapbox/dark-v11',
+          center: [-95.7129, 37.0902],
+          zoom: 4,
+          pitch: 30,
         });
-      });
-    } catch (error) {
-      console.error('Failed to initialize map:', error);
-      setMapError('Failed to initialize map. WebGL may not be available.');
-    }
+
+        map.current.on('load', () => {
+          if (isMounted) setMapReady(true);
+        });
+
+        map.current.addControl(
+          new mapboxgl.default.NavigationControl({ visualizePitch: true }),
+          'top-right'
+        );
+
+        map.current.addControl(new mapboxgl.default.ScaleControl(), 'bottom-left');
+
+        map.current.on('style.load', () => {
+          map.current?.setFog({
+            color: 'rgb(10, 15, 25)',
+            'high-color': 'rgb(20, 30, 50)',
+            'horizon-blend': 0.1,
+          });
+        });
+      } catch (error) {
+        console.error('Map init error:', error);
+      }
+    });
 
     return () => {
+      isMounted = false;
       markersRef.current.forEach(marker => marker.remove());
       map.current?.remove();
     };
   }, [mapboxToken]);
 
-  // Add markers when they change
+  // Add markers when map is ready
   useEffect(() => {
-    if (!map.current || !mapboxToken) return;
+    if (!map.current || !mapReady || !mapboxglRef.current) return;
 
-    // Clear existing markers
     markersRef.current.forEach(marker => marker.remove());
     markersRef.current = [];
 
-    // Add new markers
     markers.forEach(markerData => {
       const colors = {
         vehicle: '#00d9ff',
@@ -115,10 +124,10 @@ export function OperationsMap({ mapboxToken, markers = [] }: OperationsMapProps)
         </div>
       `;
 
-      const marker = new mapboxgl.Marker(el)
+      const marker = new mapboxglRef.current.Marker(el)
         .setLngLat([markerData.lng, markerData.lat])
         .setPopup(
-          new mapboxgl.Popup({ offset: 25 }).setHTML(
+          new mapboxglRef.current.Popup({ offset: 25 }).setHTML(
             `<div style="color: #0a0f19; padding: 4px;">
               <strong>${markerData.label}</strong><br/>
               <span style="text-transform: capitalize; color: ${colors[markerData.type]};">${markerData.type}</span>
@@ -129,7 +138,7 @@ export function OperationsMap({ mapboxToken, markers = [] }: OperationsMapProps)
 
       markersRef.current.push(marker);
     });
-  }, [markers, mapboxToken]);
+  }, [markers, mapReady]);
 
   if (!mapboxToken) {
     return (
@@ -142,13 +151,30 @@ export function OperationsMap({ mapboxToken, markers = [] }: OperationsMapProps)
     );
   }
 
-  if (mapError) {
+  // Show static map fallback when WebGL is not supported
+  if (!webGLSupported) {
+    const markerParams = markers
+      .slice(0, 10)
+      .map(m => {
+        const colors: Record<string, string> = { vehicle: '00d9ff', shelter: '22c55e', alert: 'f59e0b', resource: 'a855f7' };
+        return `pin-s+${colors[m.type]}(${m.lng},${m.lat})`;
+      })
+      .join(',');
+
+    const staticUrl = `https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/${markerParams ? markerParams + '/' : ''}-95.7129,37.0902,3,0/800x600@2x?access_token=${mapboxToken}`;
+
     return (
-      <div className="h-full flex items-center justify-center bg-secondary/30">
-        <div className="text-center space-y-2 p-4">
-          <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto" />
-          <p className="text-sm text-muted-foreground max-w-xs">{mapError}</p>
-          <p className="text-xs text-muted-foreground">The map requires WebGL support</p>
+      <div className="relative w-full h-full bg-secondary/30">
+        <img 
+          src={staticUrl} 
+          alt="Operations Map" 
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute bottom-2 left-2 bg-background/80 backdrop-blur-sm rounded px-2 py-1">
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3 text-amber-500" />
+            Static map (WebGL unavailable)
+          </p>
         </div>
       </div>
     );

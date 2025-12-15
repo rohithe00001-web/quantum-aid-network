@@ -14,16 +14,329 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          ip_address: string | null
+          resource_id: string | null
+          resource_type: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          resource_id?: string | null
+          resource_type: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          biometric_enabled: boolean | null
+          created_at: string
+          full_name: string | null
+          id: string
+          offline_token: string | null
+          offline_token_expires_at: string | null
+          phone: string | null
+          qr_code_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          biometric_enabled?: boolean | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          offline_token?: string | null
+          offline_token_expires_at?: string | null
+          phone?: string | null
+          qr_code_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          biometric_enabled?: boolean | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          offline_token?: string | null
+          offline_token_expires_at?: string | null
+          phone?: string | null
+          qr_code_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      qpu_budget: {
+        Row: {
+          active_backend: string | null
+          budget_limit: number
+          budget_used: number
+          id: string
+          total_shots: number
+          updated_at: string
+          used_shots: number
+        }
+        Insert: {
+          active_backend?: string | null
+          budget_limit?: number
+          budget_used?: number
+          id?: string
+          total_shots?: number
+          updated_at?: string
+          used_shots?: number
+        }
+        Update: {
+          active_backend?: string | null
+          budget_limit?: number
+          budget_used?: number
+          id?: string
+          total_shots?: number
+          updated_at?: string
+          used_shots?: number
+        }
+        Relationships: []
+      }
+      quantum_operations: {
+        Row: {
+          algorithm: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          is_simulation: boolean | null
+          operation_type: string
+          operator_id: string
+          parameters: Json | null
+          priority_override: boolean | null
+          result: Json | null
+          shots_used: number | null
+          status: string
+        }
+        Insert: {
+          algorithm: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          is_simulation?: boolean | null
+          operation_type: string
+          operator_id: string
+          parameters?: Json | null
+          priority_override?: boolean | null
+          result?: Json | null
+          shots_used?: number | null
+          status?: string
+        }
+        Update: {
+          algorithm?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          is_simulation?: boolean | null
+          operation_type?: string
+          operator_id?: string
+          parameters?: Json | null
+          priority_override?: boolean | null
+          result?: Json | null
+          shots_used?: number | null
+          status?: string
+        }
+        Relationships: []
+      }
+      resource_requests: {
+        Row: {
+          created_at: string
+          id: string
+          needs_baby_formula: boolean | null
+          needs_food: boolean | null
+          needs_insulin: boolean | null
+          needs_medicine: boolean | null
+          needs_water: boolean | null
+          other_needs: string | null
+          priority_level: number | null
+          sos_request_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          needs_baby_formula?: boolean | null
+          needs_food?: boolean | null
+          needs_insulin?: boolean | null
+          needs_medicine?: boolean | null
+          needs_water?: boolean | null
+          other_needs?: string | null
+          priority_level?: number | null
+          sos_request_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          needs_baby_formula?: boolean | null
+          needs_food?: boolean | null
+          needs_insulin?: boolean | null
+          needs_medicine?: boolean | null
+          needs_water?: boolean | null
+          other_needs?: string | null
+          priority_level?: number | null
+          sos_request_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_requests_sos_request_id_fkey"
+            columns: ["sos_request_id"]
+            isOneToOne: false
+            referencedRelation: "sos_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sos_requests: {
+        Row: {
+          assigned_volunteer_id: string | null
+          created_at: string
+          eta_minutes: number | null
+          id: string
+          location: Json
+          resolved_at: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          assigned_volunteer_id?: string | null
+          created_at?: string
+          eta_minutes?: number | null
+          id?: string
+          location: Json
+          resolved_at?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          assigned_volunteer_id?: string | null
+          created_at?: string
+          eta_minutes?: number | null
+          id?: string
+          location?: Json
+          resolved_at?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      volunteer_assignments: {
+        Row: {
+          assigned_at: string
+          completed_at: string | null
+          current_location: Json | null
+          current_route: Json | null
+          id: string
+          operation_id: string | null
+          status: string
+          volunteer_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          completed_at?: string | null
+          current_location?: Json | null
+          current_route?: Json | null
+          id?: string
+          operation_id?: string | null
+          status?: string
+          volunteer_id: string
+        }
+        Update: {
+          assigned_at?: string
+          completed_at?: string | null
+          current_location?: Json | null
+          current_route?: Json | null
+          id?: string
+          operation_id?: string | null
+          status?: string
+          volunteer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "volunteer_assignments_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "quantum_operations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      log_audit: {
+        Args: {
+          _action: string
+          _details?: Json
+          _resource_id?: string
+          _resource_type: string
+        }
+        Returns: string
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "operator" | "volunteer" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +463,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "operator", "volunteer", "user"],
+    },
   },
 } as const

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { MapPin } from 'lucide-react';
+import { MapPin, AlertTriangle } from 'lucide-react';
 
 interface OperationsMapProps {
   mapboxToken: string;
@@ -18,37 +18,55 @@ export function OperationsMap({ mapboxToken, markers = [] }: OperationsMapProps)
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!mapContainer.current || !mapboxToken) return;
 
-    mapboxgl.accessToken = mapboxToken;
+    // Check for WebGL support before initializing
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    if (!gl) {
+      setMapError('WebGL is not supported in this browser. Please try a different browser or enable hardware acceleration.');
+      return;
+    }
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/dark-v11',
-      center: [-95.7129, 37.0902], // Center of US
-      zoom: 4,
-      pitch: 30,
-    });
+    try {
+      mapboxgl.accessToken = mapboxToken;
 
-    map.current.addControl(
-      new mapboxgl.NavigationControl({
-        visualizePitch: true,
-      }),
-      'top-right'
-    );
-
-    map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-left');
-
-    // Add atmosphere effect
-    map.current.on('style.load', () => {
-      map.current?.setFog({
-        color: 'rgb(10, 15, 25)',
-        'high-color': 'rgb(20, 30, 50)',
-        'horizon-blend': 0.1,
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/dark-v11',
+        center: [-95.7129, 37.0902],
+        zoom: 4,
+        pitch: 30,
       });
-    });
+
+      map.current.on('error', (e) => {
+        console.error('Mapbox error:', e);
+        setMapError('Map failed to load. Please check your Mapbox token.');
+      });
+
+      map.current.addControl(
+        new mapboxgl.NavigationControl({
+          visualizePitch: true,
+        }),
+        'top-right'
+      );
+
+      map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-left');
+
+      map.current.on('style.load', () => {
+        map.current?.setFog({
+          color: 'rgb(10, 15, 25)',
+          'high-color': 'rgb(20, 30, 50)',
+          'horizon-blend': 0.1,
+        });
+      });
+    } catch (error) {
+      console.error('Failed to initialize map:', error);
+      setMapError('Failed to initialize map. WebGL may not be available.');
+    }
 
     return () => {
       markersRef.current.forEach(marker => marker.remove());
@@ -119,6 +137,18 @@ export function OperationsMap({ mapboxToken, markers = [] }: OperationsMapProps)
         <div className="text-center space-y-2">
           <MapPin className="w-10 h-10 text-muted-foreground mx-auto" />
           <p className="text-sm text-muted-foreground">Enter Mapbox token to enable map</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (mapError) {
+    return (
+      <div className="h-full flex items-center justify-center bg-secondary/30">
+        <div className="text-center space-y-2 p-4">
+          <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto" />
+          <p className="text-sm text-muted-foreground max-w-xs">{mapError}</p>
+          <p className="text-xs text-muted-foreground">The map requires WebGL support</p>
         </div>
       </div>
     );

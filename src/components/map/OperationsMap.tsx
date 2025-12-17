@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -14,105 +14,127 @@ interface OperationsMapProps {
 
 export function OperationsMap({ markers = [] }: OperationsMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<L.Map | null>(null);
-  const markersRef = useRef<L.Marker[]>([]);
+  const mapRef = useRef<L.Map | null>(null);
+  const markerLayerRef = useRef<L.FeatureGroup | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
-  useEffect(() => {
-    if (!mapContainer.current || map.current) return;
-
-    // Initialize map centered on MG Road area, Bangalore
-    map.current = L.map(mapContainer.current, {
-      center: [12.9750, 77.6070],
-      zoom: 17,
-      zoomControl: true,
-    });
-
-    // Use CartoDB dark tiles (free, no API key)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd',
-      maxZoom: 20
-    }).addTo(map.current);
-
-    // Mark map as ready after tiles load
-    map.current.whenReady(() => {
-      setMapReady(true);
-    });
-
-    return () => {
-      map.current?.remove();
-      map.current = null;
-      setMapReady(false);
-    };
-  }, []);
-
-  // Add markers when map is ready
-  useEffect(() => {
-    if (!map.current || !mapReady) return;
-
-    // Clear existing markers
-    markersRef.current.forEach(marker => marker.remove());
-    markersRef.current = [];
-
-    const colors: Record<string, string> = {
+  const colors = useMemo<Record<string, string>>(
+    () => ({
       vehicle: '#00d9ff',
       shelter: '#22c55e',
       alert: '#f59e0b',
       resource: '#a855f7',
-    };
+    }),
+    []
+  );
 
-    markers.forEach(markerData => {
-      const color = colors[markerData.type];
-      
-      // Create custom icon with inline styles
-      const icon = L.divIcon({
-        className: '',
-        html: `
-          <div style="
-            width: 28px;
-            height: 28px;
-            background: ${color};
-            border-radius: 50%;
-            border: 3px solid white;
-            box-shadow: 0 0 12px ${color}, 0 2px 8px rgba(0,0,0,0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-          ">
-            <div style="
-              width: 10px;
-              height: 10px;
-              background: white;
-              border-radius: 50%;
-            "></div>
-          </div>
-        `,
-        iconSize: [28, 28],
-        iconAnchor: [14, 14],
-        popupAnchor: [0, -14],
+  useEffect(() => {
+    if (!mapContainer.current || mapRef.current) return;
+
+    // Initialize map centered on MG Road area, Bangalore
+    const map = L.map(mapContainer.current, {
+      center: [12.975, 77.607],
+      zoom: 17,
+      zoomControl: true,
+      preferCanvas: true,
+    });
+
+    // Ensure marker visuals always sit above tiles
+    map.createPane('markerPane');
+    const pane = map.getPane('markerPane');
+    if (pane) pane.style.zIndex = '650';
+
+    // Use CartoDB dark tiles (free, no API key)
+    const tiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd',
+      maxZoom: 20,
+    });
+
+    tiles.addTo(map);
+
+    const featureGroup = L.featureGroup([], { pane: 'markerPane' });
+    featureGroup.addTo(map);
+
+    mapRef.current = map;
+    markerLayerRef.current = featureGroup;
+
+    // Ready + fix size (common issue when map mounts in a flex/animated container)
+    map.whenReady(() => {
+      requestAnimationFrame(() => {
+        map.invalidateSize();
+        setMapReady(true);
+      });
+    });
+
+    return () => {
+      setMapReady(false);
+      markerLayerRef.current = null;
+      mapRef.current?.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mapRef.current || !markerLayerRef.current || !mapReady) return;
+
+    const map = mapRef.current;
+    const group = markerLayerRef.current;
+
+    group.clearLayers();
+
+    // Use CircleMarkers for maximum visibility (no image assets, no CSS dependence)
+    markers.forEach((m) => {
+      const color = colors[m.type];
+
+      const circle = L.circleMarker([m.lat, m.lng], {
+        pane: 'markerPane',
+        radius: 8,
+        color: 'rgba(255,255,255,0.95)',
+        weight: 2,
+        fillColor: color,
+        fillOpacity: 1,
       });
 
-      const marker = L.marker([markerData.lat, markerData.lng], { icon })
-        .addTo(map.current!)
-        .bindPopup(`
-          <div style="color: #0a0f19; padding: 8px; min-width: 150px;">
-            <strong style="font-size: 14px;">${markerData.label}</strong><br/>
-            <span style="text-transform: capitalize; color: ${color}; font-weight: 500;">${markerData.type}</span>
-          </div>
-        `);
+      circle.bindTooltip(m.label, {
+        direction: 'top',
+        offset: [0, -8],
+        opacity: 0.95,
+      });
 
-      markersRef.current.push(marker);
+      circle.bindPopup(
+        `
+        <div style="color:#0a0f19;padding:8px;min-width:180px;">
+          <div style="font-weight:700;font-size:14px;">${m.label}</div>
+          <div style="margin-top:4px;text-transform:capitalize;color:${color};font-weight:600;">${m.type}</div>
+        </div>
+        `
+      );
+
+      circle.addTo(group);
     });
-  }, [markers, mapReady]);
+
+    // Auto-focus markers so they are always visible
+    if (markers.length > 0) {
+      const bounds = group.getBounds();
+      if (bounds.isValid()) {
+        map.fitBounds(bounds.pad(0.25), { animate: true, maxZoom: 18 });
+      }
+    }
+  }, [markers, mapReady, colors]);
 
   return (
     <div className="relative w-full h-full min-h-[300px]">
       <div ref={mapContainer} className="absolute inset-0 rounded-lg" />
       {!mapReady && (
         <div className="absolute inset-0 flex items-center justify-center bg-secondary/50 rounded-lg">
-          <div className="text-muted-foreground text-sm">Loading map...</div>
+          <div className="text-muted-foreground text-sm">Loading map…</div>
+        </div>
+      )}
+      {mapReady && markers.length === 0 && (
+        <div className="absolute bottom-2 left-2 bg-background/80 backdrop-blur-sm rounded px-2 py-1">
+          <p className="text-xs text-muted-foreground">No sample markers to display</p>
         </div>
       )}
     </div>

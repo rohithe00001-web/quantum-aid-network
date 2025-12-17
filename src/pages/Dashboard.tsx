@@ -53,28 +53,31 @@ const activeAlerts = [
 ];
 
 const mapMarkers = [
-  // Vehicles - Central Bangalore cluster
-  { id: "v1", lng: 77.5946, lat: 12.9716, type: "vehicle" as const, label: "Alpha-7 MG Road" },
-  { id: "v2", lng: 77.5980, lat: 12.9680, type: "vehicle" as const, label: "Bravo-3 Brigade Road" },
-  { id: "v3", lng: 77.5910, lat: 12.9750, type: "vehicle" as const, label: "Charlie-2 Cubbon Park" },
-  { id: "v4", lng: 77.6010, lat: 12.9730, type: "vehicle" as const, label: "Delta-5 Ulsoor" },
-  { id: "v5", lng: 77.5870, lat: 12.9690, type: "vehicle" as const, label: "Echo-1 Richmond Road" },
-  // Shelters - nearby areas
-  { id: "s1", lng: 77.5920, lat: 12.9780, type: "shelter" as const, label: "Vasanth Nagar Shelter (45/100)" },
-  { id: "s2", lng: 77.6050, lat: 12.9700, type: "shelter" as const, label: "Halasuru Community Center (78/150)" },
-  { id: "s3", lng: 77.5850, lat: 12.9650, type: "shelter" as const, label: "Shanthinagar Relief Camp (60/120)" },
-  { id: "s4", lng: 77.5990, lat: 12.9760, type: "shelter" as const, label: "Infantry Road School (32/80)" },
-  { id: "s5", lng: 77.5880, lat: 12.9720, type: "shelter" as const, label: "Residency Road Center (55/100)" },
-  // Alerts - concentrated area
-  { id: "a1", lng: 77.5930, lat: 12.9660, type: "alert" as const, label: "Waterlogging - Richmond Circle" },
-  { id: "a2", lng: 77.6020, lat: 12.9680, type: "alert" as const, label: "Traffic Block - Trinity Circle" },
-  { id: "a3", lng: 77.5900, lat: 12.9740, type: "alert" as const, label: "Power Outage - Cunningham Road" },
-  { id: "a4", lng: 77.5960, lat: 12.9700, type: "alert" as const, label: "Medical Emergency - Lavelle Road" },
-  // Resources - nearby depots
-  { id: "r1", lng: 77.5940, lat: 12.9790, type: "resource" as const, label: "Cubbon Park Supply Depot" },
-  { id: "r2", lng: 77.6000, lat: 12.9650, type: "resource" as const, label: "Ulsoor Medical Camp" },
-  { id: "r3", lng: 77.5860, lat: 12.9710, type: "resource" as const, label: "Kasturba Road Water Station" },
-  { id: "r4", lng: 77.5970, lat: 12.9770, type: "resource" as const, label: "Museum Road Distribution Center" },
+  // All markers tightly clustered around MG Road area
+  // Vehicles
+  { id: "v1", lng: 77.6070, lat: 12.9750, type: "vehicle" as const, label: "Alpha-7" },
+  { id: "v2", lng: 77.6085, lat: 12.9745, type: "vehicle" as const, label: "Bravo-3" },
+  { id: "v3", lng: 77.6060, lat: 12.9740, type: "vehicle" as const, label: "Charlie-2" },
+  { id: "v4", lng: 77.6095, lat: 12.9755, type: "vehicle" as const, label: "Delta-5" },
+  { id: "v5", lng: 77.6075, lat: 12.9735, type: "vehicle" as const, label: "Echo-1" },
+  { id: "v6", lng: 77.6050, lat: 12.9760, type: "vehicle" as const, label: "Foxtrot-4" },
+  // Shelters
+  { id: "s1", lng: 77.6080, lat: 12.9765, type: "shelter" as const, label: "MG Road Shelter (45/100)" },
+  { id: "s2", lng: 77.6055, lat: 12.9752, type: "shelter" as const, label: "Brigade Shelter (78/150)" },
+  { id: "s3", lng: 77.6100, lat: 12.9738, type: "shelter" as const, label: "Trinity Shelter (60/120)" },
+  { id: "s4", lng: 77.6065, lat: 12.9770, type: "shelter" as const, label: "Church St Shelter (32/80)" },
+  // Alerts
+  { id: "a1", lng: 77.6090, lat: 12.9742, type: "alert" as const, label: "Waterlogging Alert" },
+  { id: "a2", lng: 77.6045, lat: 12.9758, type: "alert" as const, label: "Traffic Block" },
+  { id: "a3", lng: 77.6072, lat: 12.9768, type: "alert" as const, label: "Power Outage" },
+  { id: "a4", lng: 77.6058, lat: 12.9732, type: "alert" as const, label: "Medical Emergency" },
+  { id: "a5", lng: 77.6088, lat: 12.9762, type: "alert" as const, label: "Fire Alert" },
+  // Resources
+  { id: "r1", lng: 77.6068, lat: 12.9748, type: "resource" as const, label: "Supply Depot" },
+  { id: "r2", lng: 77.6052, lat: 12.9745, type: "resource" as const, label: "Medical Camp" },
+  { id: "r3", lng: 77.6092, lat: 12.9750, type: "resource" as const, label: "Water Station" },
+  { id: "r4", lng: 77.6078, lat: 12.9758, type: "resource" as const, label: "Food Center" },
+  { id: "r5", lng: 77.6062, lat: 12.9762, type: "resource" as const, label: "Aid Station" },
 ];
 
 export default function Dashboard() {

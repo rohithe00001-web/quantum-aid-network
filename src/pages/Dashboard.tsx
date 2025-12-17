@@ -53,31 +53,43 @@ const activeAlerts = [
 ];
 
 const mapMarkers = [
-  // All markers in Bangalore MG Road / Brigade Road area
-  // Vehicles - KA registration numbers
+  // Vehicles spread across Bangalore - KA registration
   { id: "v1", lng: 77.6070, lat: 12.9750, type: "vehicle" as const, label: "KA-01-MG-7001 (MG Road)" },
-  { id: "v2", lng: 77.6085, lat: 12.9745, type: "vehicle" as const, label: "KA-01-BR-3002 (Brigade Rd)" },
-  { id: "v3", lng: 77.6060, lat: 12.9740, type: "vehicle" as const, label: "KA-01-CB-2003 (Cubbon Park)" },
-  { id: "v4", lng: 77.6095, lat: 12.9755, type: "vehicle" as const, label: "KA-01-TR-5004 (Trinity Circle)" },
-  { id: "v5", lng: 77.6075, lat: 12.9735, type: "vehicle" as const, label: "KA-01-RS-1005 (Residency Rd)" },
-  { id: "v6", lng: 77.6050, lat: 12.9760, type: "vehicle" as const, label: "KA-01-CH-4006 (Church St)" },
-  // Shelters - Bangalore locations
+  { id: "v2", lng: 77.6412, lat: 12.9716, type: "vehicle" as const, label: "KA-01-IN-3002 (Indiranagar)" },
+  { id: "v3", lng: 77.6245, lat: 12.9352, type: "vehicle" as const, label: "KA-01-KR-2003 (Koramangala)" },
+  { id: "v4", lng: 77.7500, lat: 12.9698, type: "vehicle" as const, label: "KA-01-WF-5004 (Whitefield)" },
+  { id: "v5", lng: 77.5838, lat: 12.9308, type: "vehicle" as const, label: "KA-01-JN-1005 (Jayanagar)" },
+  { id: "v6", lng: 77.6692, lat: 12.8458, type: "vehicle" as const, label: "KA-01-EC-4006 (Electronic City)" },
+  { id: "v7", lng: 77.6974, lat: 12.9591, type: "vehicle" as const, label: "KA-01-MH-6007 (Marathahalli)" },
+  { id: "v8", lng: 77.6101, lat: 12.9166, type: "vehicle" as const, label: "KA-01-BT-8008 (BTM Layout)" },
+  { id: "v9", lng: 77.6389, lat: 12.9116, type: "vehicle" as const, label: "KA-01-HS-9009 (HSR Layout)" },
+  { id: "v10", lng: 77.5946, lat: 12.9719, type: "vehicle" as const, label: "KA-01-ML-1010 (Malleshwaram)" },
+  
+  // Shelters across Bangalore
   { id: "s1", lng: 77.6080, lat: 12.9765, type: "shelter" as const, label: "MG Road Relief Center (45/100)" },
-  { id: "s2", lng: 77.6055, lat: 12.9752, type: "shelter" as const, label: "Brigade Road Shelter (78/150)" },
-  { id: "s3", lng: 77.6100, lat: 12.9738, type: "shelter" as const, label: "Trinity Circle Camp (60/120)" },
-  { id: "s4", lng: 77.6065, lat: 12.9770, type: "shelter" as const, label: "Church Street Shelter (32/80)" },
-  // Alerts - Bangalore specific
+  { id: "s2", lng: 77.6400, lat: 12.9780, type: "shelter" as const, label: "Indiranagar Community Hall (78/150)" },
+  { id: "s3", lng: 77.6280, lat: 12.9340, type: "shelter" as const, label: "Koramangala Stadium Shelter (120/200)" },
+  { id: "s4", lng: 77.7520, lat: 12.9720, type: "shelter" as const, label: "Whitefield ITPL Shelter (90/150)" },
+  { id: "s5", lng: 77.5800, lat: 12.9280, type: "shelter" as const, label: "Jayanagar Complex Shelter (55/100)" },
+  { id: "s6", lng: 77.6700, lat: 12.8500, type: "shelter" as const, label: "Electronic City Tech Park (200/300)" },
+  
+  // Alerts across Bangalore
   { id: "a1", lng: 77.6090, lat: 12.9742, type: "alert" as const, label: "Waterlogging - Commercial St" },
-  { id: "a2", lng: 77.6045, lat: 12.9758, type: "alert" as const, label: "Traffic Block - Kasturba Rd" },
-  { id: "a3", lng: 77.6072, lat: 12.9768, type: "alert" as const, label: "Power Outage - Lavelle Rd" },
-  { id: "a4", lng: 77.6058, lat: 12.9732, type: "alert" as const, label: "Medical Emergency - Vittal Mallya" },
-  { id: "a5", lng: 77.6088, lat: 12.9762, type: "alert" as const, label: "Fire Alert - Museum Rd" },
-  // Resources - Bangalore locations
+  { id: "a2", lng: 77.6450, lat: 12.9700, type: "alert" as const, label: "Traffic Block - 100ft Road Indiranagar" },
+  { id: "a3", lng: 77.6200, lat: 12.9300, type: "alert" as const, label: "Power Outage - Koramangala 5th Block" },
+  { id: "a4", lng: 77.7480, lat: 12.9650, type: "alert" as const, label: "Road Damage - Whitefield Main Rd" },
+  { id: "a5", lng: 77.5900, lat: 12.9350, type: "alert" as const, label: "Medical Emergency - Jayanagar 4th Block" },
+  { id: "a6", lng: 77.6950, lat: 12.9550, type: "alert" as const, label: "Fire Alert - Marathahalli Bridge" },
+  { id: "a7", lng: 77.6350, lat: 12.9100, type: "alert" as const, label: "Flooding - HSR Sector 2" },
+  
+  // Resources across Bangalore
   { id: "r1", lng: 77.6068, lat: 12.9748, type: "resource" as const, label: "Supply Depot - Garuda Mall" },
-  { id: "r2", lng: 77.6052, lat: 12.9745, type: "resource" as const, label: "Medical Camp - Manipal Center" },
-  { id: "r3", lng: 77.6092, lat: 12.9750, type: "resource" as const, label: "Water Station - UB City" },
-  { id: "r4", lng: 77.6078, lat: 12.9758, type: "resource" as const, label: "Food Center - Forum Mall" },
-  { id: "r5", lng: 77.6062, lat: 12.9762, type: "resource" as const, label: "Aid Station - Chinnaswamy Stadium" },
+  { id: "r2", lng: 77.6380, lat: 12.9750, type: "resource" as const, label: "Medical Camp - Indiranagar ESI" },
+  { id: "r3", lng: 77.6300, lat: 12.9380, type: "resource" as const, label: "Water Station - Forum Koramangala" },
+  { id: "r4", lng: 77.7550, lat: 12.9750, type: "resource" as const, label: "Food Center - Phoenix Whitefield" },
+  { id: "r5", lng: 77.5820, lat: 12.9250, type: "resource" as const, label: "Aid Station - Jayanagar Shopping" },
+  { id: "r6", lng: 77.6650, lat: 12.8420, type: "resource" as const, label: "Emergency HQ - Electronic City Phase 1" },
+  { id: "r7", lng: 77.6000, lat: 12.9700, type: "resource" as const, label: "Blood Bank - Malleshwaram" },
 ];
 
 export default function Dashboard() {

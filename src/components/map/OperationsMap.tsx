@@ -31,10 +31,10 @@ export function OperationsMap({ markers = [] }: OperationsMapProps) {
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
 
-    // Initialize map centered on MG Road area, Bangalore
+    // Initialize map centered on Bangalore city
     const map = L.map(mapContainer.current, {
-      center: [12.975, 77.607],
-      zoom: 17,
+      center: [12.9400, 77.6500],
+      zoom: 12,
       zoomControl: true,
       preferCanvas: true,
     });

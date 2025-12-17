@@ -49,6 +49,7 @@ export type Database = {
       }
       fleet_vehicles: {
         Row: {
+          assigned_shelter_id: string | null
           assigned_volunteer_id: string | null
           capacity: number | null
           created_at: string
@@ -62,6 +63,7 @@ export type Database = {
           vehicle_type: string
         }
         Insert: {
+          assigned_shelter_id?: string | null
           assigned_volunteer_id?: string | null
           capacity?: number | null
           created_at?: string
@@ -75,6 +77,7 @@ export type Database = {
           vehicle_type?: string
         }
         Update: {
+          assigned_shelter_id?: string | null
           assigned_volunteer_id?: string | null
           capacity?: number | null
           created_at?: string
@@ -87,7 +90,15 @@ export type Database = {
           vehicle_number?: string
           vehicle_type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fleet_vehicles_assigned_shelter_id_fkey"
+            columns: ["assigned_shelter_id"]
+            isOneToOne: false
+            referencedRelation: "shelters"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -354,6 +365,54 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      vehicle_dispatches: {
+        Row: {
+          completed_at: string | null
+          dispatch_type: string
+          dispatched_at: string
+          id: string
+          notes: string | null
+          shelter_id: string
+          status: string
+          vehicle_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          dispatch_type?: string
+          dispatched_at?: string
+          id?: string
+          notes?: string | null
+          shelter_id: string
+          status?: string
+          vehicle_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          dispatch_type?: string
+          dispatched_at?: string
+          id?: string
+          notes?: string | null
+          shelter_id?: string
+          status?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_dispatches_shelter_id_fkey"
+            columns: ["shelter_id"]
+            isOneToOne: false
+            referencedRelation: "shelters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_dispatches_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "fleet_vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       volunteer_assignments: {
         Row: {

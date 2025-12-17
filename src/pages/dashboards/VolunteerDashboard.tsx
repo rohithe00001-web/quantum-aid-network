@@ -7,8 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { 
   Navigation, MapPin, CheckCircle, Clock, 
-  QrCode, Wifi, WifiOff, ArrowRight, RefreshCw,
-  Phone, User, Package
+  QrCode, Wifi, WifiOff, RefreshCw
 } from 'lucide-react';
 
 type VolunteerStatus = 'idle' | 'en_route' | 'task_complete';
@@ -440,32 +439,6 @@ export default function VolunteerDashboard() {
           </div>
         </GlassCard>
 
-        {/* Quick Actions */}
-        <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Package className="w-5 h-5 text-quantum-cyan" />
-            Quick Actions
-          </h3>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2">
-              <Phone className="w-5 h-5" />
-              <span className="text-sm">Call Dispatch</span>
-            </Button>
-            <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2">
-              <MapPin className="w-5 h-5" />
-              <span className="text-sm">Update Location</span>
-            </Button>
-            <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2">
-              <User className="w-5 h-5" />
-              <span className="text-sm">Report Issue</span>
-            </Button>
-            <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2">
-              <Package className="w-5 h-5" />
-              <span className="text-sm">Supply Check</span>
-            </Button>
-          </div>
-        </GlassCard>
 
         {/* Offline Token Info */}
         {isOffline && (

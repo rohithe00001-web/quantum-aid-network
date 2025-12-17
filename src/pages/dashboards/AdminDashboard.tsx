@@ -12,9 +12,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { UserRoleManager } from '@/components/admin/UserRoleManager';
 import { 
-  Cpu, DollarSign, Shield, Settings, 
+  Cpu, IndianRupee, Shield, Settings, 
   Activity, FileText, RefreshCw, Save, RotateCcw,
-  Zap, AlertTriangle
+  AlertTriangle
 } from 'lucide-react';
 
 interface AuditLog {
@@ -43,7 +43,6 @@ export default function AdminDashboard() {
   // Editable settings
   const [editBudgetLimit, setEditBudgetLimit] = useState('');
   const [editTotalShots, setEditTotalShots] = useState('');
-  const [simulationMode, setSimulationMode] = useState(false);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -214,10 +213,10 @@ export default function AdminDashboard() {
           />
           <MetricCard
             label="Budget Used"
-            value={qpuBudget ? `$${Number(qpuBudget.budget_used).toFixed(2)}` : '—'}
-            icon={DollarSign}
+            value={qpuBudget ? `₹${Number(qpuBudget.budget_used).toFixed(2)}` : '—'}
+            icon={IndianRupee}
             trend={budgetPercentage < 80 ? 'up' : 'down'}
-            subValue={`of $${qpuBudget?.budget_limit || 0} limit`}
+            subValue={`of ₹${qpuBudget?.budget_limit || 0} limit`}
           />
           <MetricCard
             label="Active Backend"
@@ -245,7 +244,7 @@ export default function AdminDashboard() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="budgetLimit" className="text-sm text-muted-foreground">Budget Limit ($)</Label>
+                  <Label htmlFor="budgetLimit" className="text-sm text-muted-foreground">Budget Limit (₹)</Label>
                   <Input
                     id="budgetLimit"
                     type="number"
@@ -284,7 +283,7 @@ export default function AdminDashboard() {
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-muted-foreground">Budget Usage</span>
                   <span className="text-foreground">
-                    ${Number(qpuBudget?.budget_used || 0).toFixed(2)} / ${Number(qpuBudget?.budget_limit || 0).toFixed(2)}
+                    ₹{Number(qpuBudget?.budget_used || 0).toFixed(2)} / ₹{Number(qpuBudget?.budget_limit || 0).toFixed(2)}
                   </span>
                 </div>
                 <Progress value={budgetPercentage} className="h-3" />
@@ -327,19 +326,7 @@ export default function AdminDashboard() {
                 </Select>
               </div>
 
-              <div className="space-y-4 pt-2 border-t border-border/50">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="simulation" className="text-sm font-medium">Simulation Mode</Label>
-                    <p className="text-xs text-muted-foreground">Run algorithms without consuming QPU budget</p>
-                  </div>
-                  <Switch
-                    id="simulation"
-                    checked={simulationMode}
-                    onCheckedChange={setSimulationMode}
-                  />
-                </div>
-
+              <div className="pt-2 border-t border-border/50">
                 <div className="flex items-center justify-between">
                   <div>
                     <Label htmlFor="maintenance" className="text-sm font-medium">Maintenance Mode</Label>
@@ -351,13 +338,6 @@ export default function AdminDashboard() {
                     onCheckedChange={setMaintenanceMode}
                   />
                 </div>
-              </div>
-
-              <div className="p-3 bg-secondary/30 rounded-lg">
-                <p className="text-xs text-muted-foreground">
-                  <Zap className="w-3 h-3 inline mr-1" />
-                  <strong>Tip:</strong> Use Simulator mode for testing without consuming QPU budget.
-                </p>
               </div>
             </div>
           </GlassCard>

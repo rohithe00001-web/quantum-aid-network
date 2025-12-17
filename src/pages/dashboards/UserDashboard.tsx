@@ -11,8 +11,8 @@ import { toast } from '@/hooks/use-toast';
 import { QuantumLoader } from '@/components/ui/QuantumLoader';
 import { 
   AlertCircle, Clock, MapPin, Droplets, 
-  Pill, Baby, Package, Send, CheckCircle,
-  XCircle, RefreshCw, Phone, User, Settings
+  Pill, Baby, Package, CheckCircle,
+  XCircle, RefreshCw, Phone
 } from 'lucide-react';
 
 interface ResourceNeeds {
@@ -478,60 +478,21 @@ export default function UserDashboard() {
           </GlassCard>
         )}
 
-        {/* Quick Actions */}
+        {/* Emergency Contact */}
         <GlassCard className="p-6">
           <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Settings className="w-5 h-5 text-quantum-cyan" />
-            Quick Actions
+            <Phone className="w-5 h-5 text-quantum-cyan" />
+            Emergency Contact
           </h3>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Button 
-              variant="outline" 
-              className="h-auto py-4 flex flex-col items-center gap-2"
-              onClick={() => {
-                if (navigator.geolocation) {
-                  navigator.geolocation.getCurrentPosition(
-                    (pos) => toast({ title: 'Location Updated', description: `Lat: ${pos.coords.latitude.toFixed(4)}, Lng: ${pos.coords.longitude.toFixed(4)}` }),
-                    () => toast({ title: 'Location Error', description: 'Could not get location', variant: 'destructive' })
-                  );
-                }
-              }}
-            >
-              <MapPin className="w-5 h-5" />
-              <span className="text-sm">Update Location</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-auto py-4 flex flex-col items-center gap-2"
-              onClick={() => window.open('tel:911')}
-            >
-              <Phone className="w-5 h-5" />
-              <span className="text-sm">Call 911</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-auto py-4 flex flex-col items-center gap-2"
-              onClick={() => {
-                const name = prompt('Enter your name:');
-                if (name) updateProfile('full_name', name);
-              }}
-            >
-              <User className="w-5 h-5" />
-              <span className="text-sm">Update Name</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-auto py-4 flex flex-col items-center gap-2"
-              onClick={() => {
-                const phone = prompt('Enter your phone:');
-                if (phone) updateProfile('phone', phone);
-              }}
-            >
-              <Phone className="w-5 h-5" />
-              <span className="text-sm">Update Phone</span>
-            </Button>
-          </div>
+          <Button 
+            variant="outline" 
+            className="w-full h-auto py-4 flex items-center justify-center gap-2"
+            onClick={() => window.open('tel:112')}
+          >
+            <Phone className="w-5 h-5" />
+            <span className="text-lg font-medium">Call 112 (Emergency)</span>
+          </Button>
         </GlassCard>
       </div>
     </Layout>

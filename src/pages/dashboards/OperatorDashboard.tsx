@@ -10,9 +10,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { 
-  Play, Map, Sliders, FlaskConical, 
+  Play, Sliders, 
   Truck, Users, AlertTriangle, Zap,
-  BarChart3, RefreshCw, Eye, ArrowUp, ArrowDown
+  BarChart3, RefreshCw, ArrowUp, ArrowDown
 } from 'lucide-react';
 
 interface SOSRequest {
@@ -33,7 +33,6 @@ export default function OperatorDashboard() {
   const { user } = useAuth();
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationType, setOptimizationType] = useState<string | null>(null);
-  const [simulationRunning, setSimulationRunning] = useState<string | null>(null);
   const [priorityOverrideEnabled, setPriorityOverrideEnabled] = useState(false);
   const [stats, setStats] = useState({
     activeVehicles: 0,
@@ -148,39 +147,6 @@ export default function OperatorDashboard() {
     } finally {
       setIsOptimizing(false);
       setOptimizationType(null);
-    }
-  };
-
-  const runSimulation = async (type: string) => {
-    if (!user) return;
-
-    setSimulationRunning(type);
-
-    try {
-      await supabase.from('quantum_operations').insert({
-        operator_id: user.id,
-        operation_type: `Simulation: ${type}`,
-        algorithm: 'VQE',
-        status: 'running',
-        is_simulation: true,
-        parameters: { scenario: type, initiated_at: new Date().toISOString() }
-      });
-
-      // Simulate VQE processing
-      await new Promise(resolve => setTimeout(resolve, 4000));
-
-      toast({
-        title: 'Simulation Complete',
-        description: `${type} simulation finished. Results available in reports.`
-      });
-    } catch (error) {
-      toast({
-        title: 'Simulation Failed',
-        description: 'An error occurred during simulation',
-        variant: 'destructive'
-      });
-    } finally {
-      setSimulationRunning(null);
     }
   };
 
@@ -484,62 +450,6 @@ export default function OperatorDashboard() {
           </GlassCard>
         </div>
 
-        {/* Simulation Mode */}
-        <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <FlaskConical className="w-5 h-5 text-quantum-cyan" />
-            Simulation Mode - VQE What-If Analysis
-          </h3>
-
-          <p className="text-muted-foreground text-sm mb-4">
-            Run predictive simulations using Variational Quantum Eigensolver to model disaster scenarios before deploying resources.
-          </p>
-
-          {simulationRunning ? (
-            <div className="flex flex-col items-center py-8">
-              <QuantumLoader size="lg" />
-              <p className="mt-4 text-quantum-cyan animate-pulse">
-                Running {simulationRunning} simulation...
-              </p>
-              <p className="text-sm text-muted-foreground">
-                VQE algorithm processing scenario
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button 
-                variant="outline" 
-                className="h-auto py-4"
-                onClick={() => runSimulation('Flood Spread Model')}
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <span className="font-medium">Flood Spread Model</span>
-                  <span className="text-xs text-muted-foreground">Predict 24hr expansion</span>
-                </div>
-              </Button>
-              <Button 
-                variant="outline" 
-                className="h-auto py-4"
-                onClick={() => runSimulation('Evacuation Scenario')}
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <span className="font-medium">Evacuation Scenario</span>
-                  <span className="text-xs text-muted-foreground">Test route capacity</span>
-                </div>
-              </Button>
-              <Button 
-                variant="outline" 
-                className="h-auto py-4"
-                onClick={() => runSimulation('Resource Depletion')}
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <span className="font-medium">Resource Depletion</span>
-                  <span className="text-xs text-muted-foreground">Supply timeline model</span>
-                </div>
-              </Button>
-            </div>
-          )}
-        </GlassCard>
       </div>
     </Layout>
   );

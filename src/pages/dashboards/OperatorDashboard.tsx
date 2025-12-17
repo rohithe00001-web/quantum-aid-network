@@ -10,6 +10,7 @@ import { QuantumLoader } from '@/components/ui/QuantumLoader';
 import { OperationsMap } from '@/components/map/OperationsMap';
 import { FleetManager } from '@/components/fleet/FleetManager';
 import { ShelterManager } from '@/components/shelter/ShelterManager';
+import { VehicleDispatch } from '@/components/dispatch/VehicleDispatch';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -686,6 +687,9 @@ export default function OperatorDashboard() {
             </div>
           </GlassCard>
         </div>
+
+        {/* Vehicle Dispatch */}
+        <VehicleDispatch />
 
         {/* Fleet & Shelter Management */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

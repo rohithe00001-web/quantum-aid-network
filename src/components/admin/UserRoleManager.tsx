@@ -103,14 +103,6 @@ export function UserRoleManager() {
       setUsers(prev => prev.map(u => 
         u.user_id === userId ? { ...u, role: newRole } : u
       ));
-
-      // Log the action
-      await supabase.rpc('log_audit', {
-        _action: 'role_change',
-        _resource_type: 'user_roles',
-        _resource_id: roleId,
-        _details: { new_role: newRole, target_user_id: userId }
-      });
     }
     
     setUpdating(null);

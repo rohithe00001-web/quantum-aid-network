@@ -17,17 +17,9 @@ import { FleetManager } from '@/components/fleet/FleetManager';
 import { ShelterManager } from '@/components/shelter/ShelterManager';
 import { 
   Cpu, IndianRupee, Shield, Settings, 
-  Activity, FileText, RefreshCw, Save, RotateCcw,
-  AlertTriangle, Truck, Building2
+  Activity, RefreshCw, Save, RotateCcw,
+  AlertTriangle
 } from 'lucide-react';
-
-interface AuditLog {
-  id: string;
-  action: string;
-  resource_type: string;
-  created_at: string;
-  user_id: string | null;
-}
 
 interface QPUBudget {
   id: string;
@@ -40,7 +32,6 @@ interface QPUBudget {
 
 export default function AdminDashboard() {
   const [qpuBudget, setQpuBudget] = useState<QPUBudget | null>(null);
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [selectedBackend, setSelectedBackend] = useState('D-Wave');
   const [loading, setLoading] = useState(true);
   
@@ -64,18 +55,15 @@ export default function AdminDashboard() {
   const fetchData = async () => {
     setLoading(true);
     
-    const [budgetRes, logsRes] = await Promise.all([
-      supabase.from('qpu_budget').select('*').limit(1).maybeSingle(),
-      supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(20)
-    ]);
+    const { data: budgetRes } = await supabase
+      .from('qpu_budget')
+      .select('*')
+      .limit(1)
+      .maybeSingle();
 
-    if (budgetRes.data) {
-      setQpuBudget(budgetRes.data);
-      setSelectedBackend(budgetRes.data.active_backend || 'D-Wave');
-    }
-    
-    if (logsRes.data) {
-      setAuditLogs(logsRes.data);
+    if (budgetRes) {
+      setQpuBudget(budgetRes);
+      setSelectedBackend(budgetRes.active_backend || 'D-Wave');
     }
     
     setLoading(false);
@@ -94,13 +82,6 @@ export default function AdminDashboard() {
     } else {
       setSelectedBackend(backend);
       toast({ title: 'Backend Updated', description: `Switched to ${backend}` });
-      
-      await supabase.rpc('log_audit', {
-        _action: 'backend_change',
-        _resource_type: 'qpu_budget',
-        _resource_id: qpuBudget.id,
-        _details: { new_backend: backend }
-      });
       fetchData();
     }
   };
@@ -137,13 +118,6 @@ export default function AdminDashboard() {
       toast({ title: 'Error', description: 'Failed to save settings', variant: 'destructive' });
     } else {
       toast({ title: 'Settings Saved', description: 'Budget configuration updated successfully' });
-      
-      await supabase.rpc('log_audit', {
-        _action: 'budget_update',
-        _resource_type: 'qpu_budget',
-        _resource_id: qpuBudget.id,
-        _details: { budget_limit: budgetLimit, total_shots: totalShots }
-      });
       fetchData();
     }
     
@@ -171,13 +145,6 @@ export default function AdminDashboard() {
       toast({ title: 'Error', description: 'Failed to reset usage', variant: 'destructive' });
     } else {
       toast({ title: 'Usage Reset', description: 'All QPU usage counters have been reset' });
-      
-      await supabase.rpc('log_audit', {
-        _action: 'usage_reset',
-        _resource_type: 'qpu_budget',
-        _resource_id: qpuBudget.id,
-        _details: { reset_at: new Date().toISOString() }
-      });
       fetchData();
     }
     
@@ -346,35 +313,6 @@ export default function AdminDashboard() {
             </div>
           </GlassCard>
         </div>
-
-        {/* Audit Logs */}
-        <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-quantum-cyan" />
-            Audit Logs
-          </h3>
-
-          <div className="space-y-2 max-h-80 overflow-y-auto">
-            {auditLogs.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">No audit logs yet</p>
-            ) : (
-              auditLogs.map((log) => (
-                <div key={log.id} className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Shield className="w-4 h-4 text-quantum-cyan" />
-                    <div>
-                      <p className="text-sm text-foreground">{log.action}</p>
-                      <p className="text-xs text-muted-foreground">{log.resource_type}</p>
-                    </div>
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(log.created_at).toLocaleString()}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </GlassCard>
 
         {/* Operations Map */}
         <SharedOperationsMap 

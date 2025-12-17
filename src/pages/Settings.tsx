@@ -127,7 +127,6 @@ export default function Settings() {
       toast.error("Failed to save profile settings");
     } else {
       toast.success("Profile settings saved");
-      await logAudit('update_profile', { fullName, phone });
     }
     setLoading(false);
   };
@@ -150,7 +149,6 @@ export default function Settings() {
       toast.error("Failed to save system settings");
     } else {
       toast.success("System settings saved");
-      await logAudit('update_system_settings', { budgetLimit, totalShots, algorithmBackend, simulationMode, maintenanceMode });
     }
     setLoading(false);
   };
@@ -172,17 +170,8 @@ export default function Settings() {
       toast.error("Failed to reset usage");
     } else {
       toast.success("Usage counters reset");
-      await logAudit('reset_usage', {});
     }
     setLoading(false);
-  };
-
-  const logAudit = async (action: string, details: Record<string, unknown>) => {
-    await supabase.rpc('log_audit', {
-      _action: action,
-      _resource_type: 'settings',
-      _details: details as Json
-    });
   };
 
   const saveNotificationSettings = () => {

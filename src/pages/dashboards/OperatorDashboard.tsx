@@ -5,14 +5,16 @@ import { MetricCard } from '@/components/ui/MetricCard';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { QuantumLoader } from '@/components/ui/QuantumLoader';
+import { OperationsMap } from '@/components/map/OperationsMap';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { 
   Play, Sliders, 
   Truck, Users, AlertTriangle, Zap,
-  BarChart3, RefreshCw, ArrowUp, ArrowDown
+  BarChart3, RefreshCw, ArrowUp, ArrowDown, Map
 } from 'lucide-react';
 
 interface SOSRequest {
@@ -29,6 +31,21 @@ interface RouteOverride {
   priority: 'high' | 'medium' | 'low';
 }
 
+interface VolunteerLocation {
+  id: string;
+  volunteer_id: string;
+  current_location: { lat: number; lng: number } | null;
+  status: string;
+}
+
+interface MapMarker {
+  id: string;
+  lng: number;
+  lat: number;
+  type: 'vehicle' | 'shelter' | 'alert' | 'resource';
+  label: string;
+}
+
 export default function OperatorDashboard() {
   const { user } = useAuth();
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -41,6 +58,9 @@ export default function OperatorDashboard() {
     resourcesDeployed: 0
   });
   const [sosRequests, setSosRequests] = useState<SOSRequest[]>([]);
+  const [volunteerLocations, setVolunteerLocations] = useState<VolunteerLocation[]>([]);
+  const [mapboxToken, setMapboxToken] = useState(() => localStorage.getItem('mapbox_token') || '');
+  const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
   const [routes, setRoutes] = useState<RouteOverride[]>([
     { id: '1', name: 'Highway 101 - North', status: 'blocked', priority: 'high' },
     { id: '2', name: 'Main Street Bridge', status: 'congested', priority: 'medium' },
@@ -50,9 +70,10 @@ export default function OperatorDashboard() {
   useEffect(() => {
     fetchStats();
     fetchSOSRequests();
+    fetchVolunteerLocations();
 
     // Subscribe to real-time SOS updates
-    const channel = supabase
+    const sosChannel = supabase
       .channel('sos_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sos_requests' }, () => {
         fetchSOSRequests();
@@ -60,8 +81,18 @@ export default function OperatorDashboard() {
       })
       .subscribe();
 
+    // Subscribe to real-time volunteer location updates
+    const volunteerChannel = supabase
+      .channel('volunteer_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'volunteer_assignments' }, () => {
+        fetchVolunteerLocations();
+        fetchStats();
+      })
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(sosChannel);
+      supabase.removeChannel(volunteerChannel);
     };
   }, []);
 
@@ -102,6 +133,58 @@ export default function OperatorDashboard() {
     if (data) {
       setSosRequests(data as SOSRequest[]);
     }
+  };
+
+  const fetchVolunteerLocations = async () => {
+    const { data } = await supabase
+      .from('volunteer_assignments')
+      .select('id, volunteer_id, current_location, status')
+      .in('status', ['en_route', 'idle']);
+
+    if (data) {
+      setVolunteerLocations(data as VolunteerLocation[]);
+    }
+  };
+
+  // Build map markers from SOS requests and volunteer locations
+  useEffect(() => {
+    const markers: MapMarker[] = [];
+
+    // Add SOS markers
+    sosRequests.forEach((sos) => {
+      const loc = sos.location as { lat: number; lng: number };
+      if (loc?.lat && loc?.lng) {
+        markers.push({
+          id: `sos-${sos.id}`,
+          lat: loc.lat,
+          lng: loc.lng,
+          type: 'alert',
+          label: `SOS #${sos.id.slice(0, 6)}`
+        });
+      }
+    });
+
+    // Add volunteer markers
+    volunteerLocations.forEach((vol) => {
+      const loc = vol.current_location;
+      if (loc?.lat && loc?.lng) {
+        markers.push({
+          id: `vol-${vol.id}`,
+          lat: loc.lat,
+          lng: loc.lng,
+          type: 'vehicle',
+          label: `Volunteer ${vol.status === 'en_route' ? '(En Route)' : '(Idle)'}`
+        });
+      }
+    });
+
+    setMapMarkers(markers);
+  }, [sosRequests, volunteerLocations]);
+
+  const saveMapboxToken = (token: string) => {
+    localStorage.setItem('mapbox_token', token);
+    setMapboxToken(token);
+    toast({ title: 'Token Saved', description: 'Mapbox token stored successfully' });
   };
 
   const executeQuantumOptimization = async (type: string, algorithm: string) => {
@@ -254,6 +337,54 @@ export default function OperatorDashboard() {
             </span>
           </div>
         </div>
+
+        {/* Real-time Operations Map */}
+        <GlassCard className="p-4" variant="quantum">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <Map className="w-5 h-5 text-quantum-cyan" />
+              Real-time Operations Map
+            </h3>
+            {!mapboxToken && (
+              <div className="flex items-center gap-2">
+                <Input
+                  type="text"
+                  placeholder="Enter Mapbox token..."
+                  className="w-64 bg-secondary/50 text-sm"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      saveMapboxToken((e.target as HTMLInputElement).value);
+                    }
+                  }}
+                />
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={(e) => {
+                    const input = (e.target as HTMLElement).previousElementSibling as HTMLInputElement;
+                    if (input?.value) saveMapboxToken(input.value);
+                  }}
+                >
+                  Save
+                </Button>
+              </div>
+            )}
+          </div>
+          <div className="h-80 rounded-lg overflow-hidden border border-border/30">
+            <OperationsMap mapboxToken={mapboxToken} markers={mapMarkers} />
+          </div>
+          <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 rounded-full bg-[#f59e0b]" /> SOS Alerts
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 rounded-full bg-[#00d9ff]" /> Volunteers
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 rounded-full bg-[#22c55e]" /> Shelters
+            </span>
+          </div>
+        </GlassCard>
 
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

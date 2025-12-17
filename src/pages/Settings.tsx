@@ -37,6 +37,7 @@ export default function Settings() {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [qrCodeId, setQrCodeId] = useState("");
   
   // Notification settings
   const [emailNotifications, setEmailNotifications] = useState(true);
@@ -85,6 +86,7 @@ export default function Settings() {
       setPhone(profile.phone || "");
       setAvatarUrl(profile.avatar_url || "");
       setBiometricEnabled(profile.biometric_enabled || false);
+      setQrCodeId(profile.qr_code_id || "");
     }
     
     // Fetch QPU budget for admin/operator
@@ -253,6 +255,23 @@ export default function Settings() {
                 Profile Information
               </h2>
               <div className="grid gap-4 max-w-md">
+                {/* Avatar Preview */}
+                <div className="flex items-center gap-4">
+                  <div className="h-16 w-16 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center overflow-hidden">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+                    ) : (
+                      <User className="h-8 w-8 text-primary" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium">{fullName || "Set your name"}</p>
+                    <p className="text-sm text-muted-foreground capitalize">{role || "User"}</p>
+                  </div>
+                </div>
+                
+                <Separator />
+                
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input id="email" value={user?.email || ""} disabled className="bg-muted/50" />
@@ -273,7 +292,7 @@ export default function Settings() {
                     id="phone" 
                     value={phone} 
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+1 (555) 000-0000"
+                    placeholder="+91 98765 43210"
                   />
                 </div>
                 <div className="space-y-2">
@@ -285,6 +304,31 @@ export default function Settings() {
                     placeholder="https://example.com/avatar.jpg"
                   />
                 </div>
+                
+                {/* QR Code ID for volunteers */}
+                {(role === 'volunteer' || role === 'admin' || role === 'operator') && qrCodeId && (
+                  <>
+                    <Separator />
+                    <div className="space-y-2">
+                      <Label>QR Code ID</Label>
+                      <div className="flex items-center gap-2">
+                        <Input value={qrCodeId} disabled className="bg-muted/50 font-mono text-sm" />
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText(qrCodeId);
+                            toast.success("QR Code ID copied");
+                          }}
+                        >
+                          Copy
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Your unique identification code</p>
+                    </div>
+                  </>
+                )}
+                
                 <Separator className="my-2" />
                 <div className="flex items-center justify-between">
                   <div>

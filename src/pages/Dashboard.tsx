@@ -53,12 +53,28 @@ const activeAlerts = [
 ];
 
 const mapMarkers = [
+  // Vehicles
   { id: "v1", lng: 77.5946, lat: 12.9716, type: "vehicle" as const, label: "Alpha-7 MG Road" },
   { id: "v2", lng: 77.6245, lat: 12.9352, type: "vehicle" as const, label: "Bravo-3 Koramangala" },
-  { id: "s1", lng: 77.5800, lat: 12.9850, type: "shelter" as const, label: "Malleshwaram Shelter" },
-  { id: "s2", lng: 77.6410, lat: 12.9698, type: "shelter" as const, label: "Indiranagar Community Center" },
+  { id: "v3", lng: 77.6501, lat: 12.9719, type: "vehicle" as const, label: "Charlie-2 HAL" },
+  { id: "v4", lng: 77.5073, lat: 12.9591, type: "vehicle" as const, label: "Delta-5 Vijayanagar" },
+  { id: "v5", lng: 77.5685, lat: 13.0358, type: "vehicle" as const, label: "Echo-1 Yelahanka" },
+  // Shelters
+  { id: "s1", lng: 77.5800, lat: 12.9850, type: "shelter" as const, label: "Malleshwaram Shelter (45/100)" },
+  { id: "s2", lng: 77.6410, lat: 12.9698, type: "shelter" as const, label: "Indiranagar Community Center (78/150)" },
+  { id: "s3", lng: 77.5355, lat: 12.9121, type: "shelter" as const, label: "RR Nagar Relief Camp (120/200)" },
+  { id: "s4", lng: 77.6971, lat: 12.9592, type: "shelter" as const, label: "Whitefield Emergency Shelter (32/80)" },
+  { id: "s5", lng: 77.5940, lat: 13.0067, type: "shelter" as const, label: "Sadashivanagar School (55/100)" },
+  // Alerts
   { id: "a1", lng: 77.5500, lat: 12.9500, type: "alert" as const, label: "Flood Alert - Rajajinagar" },
+  { id: "a2", lng: 77.6100, lat: 12.9050, type: "alert" as const, label: "Waterlogging - BTM Layout" },
+  { id: "a3", lng: 77.6800, lat: 12.9300, type: "alert" as const, label: "Road Block - Marathahalli" },
+  { id: "a4", lng: 77.5200, lat: 13.0100, type: "alert" as const, label: "Power Outage - Yeshwanthpur" },
+  // Resources
   { id: "r1", lng: 77.6100, lat: 13.0200, type: "resource" as const, label: "Hebbal Supply Depot" },
+  { id: "r2", lng: 77.5650, lat: 12.9200, type: "resource" as const, label: "Basavanagudi Medical Camp" },
+  { id: "r3", lng: 77.7100, lat: 12.9800, type: "resource" as const, label: "KR Puram Distribution Center" },
+  { id: "r4", lng: 77.5400, lat: 12.9700, type: "resource" as const, label: "Rajajinagar Water Station" },
 ];
 
 export default function Dashboard() {

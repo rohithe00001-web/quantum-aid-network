@@ -20,10 +20,10 @@ export function OperationsMap({ markers = [] }: OperationsMapProps) {
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
-    // Initialize map centered on Bangalore, Karnataka, India
+    // Initialize map centered on Central Bangalore
     map.current = L.map(mapContainer.current, {
       center: [12.9716, 77.5946],
-      zoom: 11,
+      zoom: 15,
       zoomControl: true,
     });
 

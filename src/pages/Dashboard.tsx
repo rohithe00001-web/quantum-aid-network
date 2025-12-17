@@ -53,28 +53,28 @@ const activeAlerts = [
 ];
 
 const mapMarkers = [
-  // Vehicles
+  // Vehicles - Central Bangalore cluster
   { id: "v1", lng: 77.5946, lat: 12.9716, type: "vehicle" as const, label: "Alpha-7 MG Road" },
-  { id: "v2", lng: 77.6245, lat: 12.9352, type: "vehicle" as const, label: "Bravo-3 Koramangala" },
-  { id: "v3", lng: 77.6501, lat: 12.9719, type: "vehicle" as const, label: "Charlie-2 HAL" },
-  { id: "v4", lng: 77.5073, lat: 12.9591, type: "vehicle" as const, label: "Delta-5 Vijayanagar" },
-  { id: "v5", lng: 77.5685, lat: 13.0358, type: "vehicle" as const, label: "Echo-1 Yelahanka" },
-  // Shelters
-  { id: "s1", lng: 77.5800, lat: 12.9850, type: "shelter" as const, label: "Malleshwaram Shelter (45/100)" },
-  { id: "s2", lng: 77.6410, lat: 12.9698, type: "shelter" as const, label: "Indiranagar Community Center (78/150)" },
-  { id: "s3", lng: 77.5355, lat: 12.9121, type: "shelter" as const, label: "RR Nagar Relief Camp (120/200)" },
-  { id: "s4", lng: 77.6971, lat: 12.9592, type: "shelter" as const, label: "Whitefield Emergency Shelter (32/80)" },
-  { id: "s5", lng: 77.5940, lat: 13.0067, type: "shelter" as const, label: "Sadashivanagar School (55/100)" },
-  // Alerts
-  { id: "a1", lng: 77.5500, lat: 12.9500, type: "alert" as const, label: "Flood Alert - Rajajinagar" },
-  { id: "a2", lng: 77.6100, lat: 12.9050, type: "alert" as const, label: "Waterlogging - BTM Layout" },
-  { id: "a3", lng: 77.6800, lat: 12.9300, type: "alert" as const, label: "Road Block - Marathahalli" },
-  { id: "a4", lng: 77.5200, lat: 13.0100, type: "alert" as const, label: "Power Outage - Yeshwanthpur" },
-  // Resources
-  { id: "r1", lng: 77.6100, lat: 13.0200, type: "resource" as const, label: "Hebbal Supply Depot" },
-  { id: "r2", lng: 77.5650, lat: 12.9200, type: "resource" as const, label: "Basavanagudi Medical Camp" },
-  { id: "r3", lng: 77.7100, lat: 12.9800, type: "resource" as const, label: "KR Puram Distribution Center" },
-  { id: "r4", lng: 77.5400, lat: 12.9700, type: "resource" as const, label: "Rajajinagar Water Station" },
+  { id: "v2", lng: 77.5980, lat: 12.9680, type: "vehicle" as const, label: "Bravo-3 Brigade Road" },
+  { id: "v3", lng: 77.5910, lat: 12.9750, type: "vehicle" as const, label: "Charlie-2 Cubbon Park" },
+  { id: "v4", lng: 77.6010, lat: 12.9730, type: "vehicle" as const, label: "Delta-5 Ulsoor" },
+  { id: "v5", lng: 77.5870, lat: 12.9690, type: "vehicle" as const, label: "Echo-1 Richmond Road" },
+  // Shelters - nearby areas
+  { id: "s1", lng: 77.5920, lat: 12.9780, type: "shelter" as const, label: "Vasanth Nagar Shelter (45/100)" },
+  { id: "s2", lng: 77.6050, lat: 12.9700, type: "shelter" as const, label: "Halasuru Community Center (78/150)" },
+  { id: "s3", lng: 77.5850, lat: 12.9650, type: "shelter" as const, label: "Shanthinagar Relief Camp (60/120)" },
+  { id: "s4", lng: 77.5990, lat: 12.9760, type: "shelter" as const, label: "Infantry Road School (32/80)" },
+  { id: "s5", lng: 77.5880, lat: 12.9720, type: "shelter" as const, label: "Residency Road Center (55/100)" },
+  // Alerts - concentrated area
+  { id: "a1", lng: 77.5930, lat: 12.9660, type: "alert" as const, label: "Waterlogging - Richmond Circle" },
+  { id: "a2", lng: 77.6020, lat: 12.9680, type: "alert" as const, label: "Traffic Block - Trinity Circle" },
+  { id: "a3", lng: 77.5900, lat: 12.9740, type: "alert" as const, label: "Power Outage - Cunningham Road" },
+  { id: "a4", lng: 77.5960, lat: 12.9700, type: "alert" as const, label: "Medical Emergency - Lavelle Road" },
+  // Resources - nearby depots
+  { id: "r1", lng: 77.5940, lat: 12.9790, type: "resource" as const, label: "Cubbon Park Supply Depot" },
+  { id: "r2", lng: 77.6000, lat: 12.9650, type: "resource" as const, label: "Ulsoor Medical Camp" },
+  { id: "r3", lng: 77.5860, lat: 12.9710, type: "resource" as const, label: "Kasturba Road Water Station" },
+  { id: "r4", lng: 77.5970, lat: 12.9770, type: "resource" as const, label: "Museum Road Distribution Center" },
 ];
 
 export default function Dashboard() {

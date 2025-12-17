@@ -12,10 +12,8 @@ import { QuantumLoader } from '@/components/ui/QuantumLoader';
 import { 
   AlertCircle, Clock, MapPin, Droplets, 
   Pill, Baby, Package, CheckCircle,
-  XCircle, RefreshCw, Phone, Route, 
-  Boxes, TrafficCone, Zap
+  XCircle, RefreshCw, Phone
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 interface ResourceNeeds {
   water: boolean;
@@ -35,7 +33,6 @@ interface SOSRequest {
 }
 
 export default function UserDashboard() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const [sosStatus, setSosStatus] = useState<'none' | 'pending' | 'help_coming' | 'resolved'>('none');
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
@@ -480,59 +477,6 @@ export default function UserDashboard() {
             </div>
           </GlassCard>
         )}
-
-        {/* Quick Links to Optimization Pages */}
-        <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Zap className="w-5 h-5 text-quantum-cyan" />
-            Disaster Response Status
-          </h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            View real-time quantum-optimized operations
-          </p>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              variant="outline"
-              className="h-auto py-4 flex flex-col items-center gap-2 hover:bg-quantum-cyan/10 hover:border-quantum-cyan/50"
-              onClick={() => navigate('/fleet-routing')}
-            >
-              <Route className="w-6 h-6 text-blue-400" />
-              <span className="text-sm font-medium">Fleet Routing</span>
-              <span className="text-xs text-muted-foreground">Vehicle dispatch</span>
-            </Button>
-
-            <Button
-              variant="outline"
-              className="h-auto py-4 flex flex-col items-center gap-2 hover:bg-quantum-cyan/10 hover:border-quantum-cyan/50"
-              onClick={() => navigate('/resource-allocation')}
-            >
-              <Boxes className="w-6 h-6 text-green-400" />
-              <span className="text-sm font-medium">Resources</span>
-              <span className="text-xs text-muted-foreground">Supply distribution</span>
-            </Button>
-
-            <Button
-              variant="outline"
-              className="h-auto py-4 flex flex-col items-center gap-2 hover:bg-quantum-cyan/10 hover:border-quantum-cyan/50"
-              onClick={() => navigate('/evacuation-flow')}
-            >
-              <TrafficCone className="w-6 h-6 text-orange-400" />
-              <span className="text-sm font-medium">Evacuation</span>
-              <span className="text-xs text-muted-foreground">Traffic flow</span>
-            </Button>
-
-            <Button
-              variant="outline"
-              className="h-auto py-4 flex flex-col items-center gap-2 hover:bg-quantum-cyan/10 hover:border-quantum-cyan/50"
-              onClick={() => navigate('/grid-recovery')}
-            >
-              <Zap className="w-6 h-6 text-yellow-400" />
-              <span className="text-sm font-medium">Grid Recovery</span>
-              <span className="text-xs text-muted-foreground">Infrastructure</span>
-            </Button>
-          </div>
-        </GlassCard>
 
         {/* Emergency Contact */}
         <GlassCard className="p-6">

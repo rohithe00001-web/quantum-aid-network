@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Bell, AlertTriangle, Truck, Users, MapPin, CheckCircle2, X } from 'lucide-react';
 import {
   Popover,
@@ -7,6 +7,8 @@ import {
 } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { supabase } from '@/integrations/supabase/client';
+import { formatDistanceToNow } from 'date-fns';
 
 interface Notification {
   id: string;
@@ -18,71 +20,30 @@ interface Notification {
   read: boolean;
 }
 
-const initialNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'alert',
-    title: 'Flash Flood Warning',
-    message: 'Heavy rainfall expected in next 2 hours',
-    location: 'Koramangala, Bangalore',
-    time: '2 min ago',
-    read: false,
-  },
-  {
-    id: '2',
-    type: 'sos',
-    title: 'New SOS Request',
-    message: 'Family of 4 stranded, need evacuation',
-    location: 'Indiranagar 100ft Road',
-    time: '5 min ago',
-    read: false,
-  },
-  {
-    id: '3',
-    type: 'vehicle',
-    title: 'Vehicle KA-01-MG-7001 Dispatched',
-    message: 'En route to MG Road Relief Center',
-    location: 'MG Road, Bangalore',
-    time: '8 min ago',
-    read: false,
-  },
-  {
-    id: '4',
-    type: 'shelter',
-    title: 'Shelter Capacity Alert',
-    message: 'Brigade Road Shelter at 85% capacity',
-    location: 'Brigade Road, Bangalore',
-    time: '12 min ago',
-    read: true,
-  },
-  {
-    id: '5',
-    type: 'success',
-    title: 'Evacuation Complete',
-    message: '45 people evacuated successfully',
-    location: 'Whitefield, Bangalore',
-    time: '18 min ago',
-    read: true,
-  },
-  {
-    id: '6',
-    type: 'alert',
-    title: 'Power Outage Reported',
-    message: 'Grid failure in sector, backup activated',
-    location: 'Electronic City Phase 1',
-    time: '25 min ago',
-    read: true,
-  },
-  {
-    id: '7',
-    type: 'vehicle',
-    title: 'Supply Delivery Completed',
-    message: 'Medical supplies delivered to shelter',
-    location: 'Trinity Circle Camp',
-    time: '32 min ago',
-    read: true,
-  },
-];
+interface SOSRequest {
+  id: string;
+  status: string;
+  location: { lat: number; lng: number; address?: string } | null;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+const transformSOSToNotification = (sos: SOSRequest): Notification => {
+  const locationText = sos.location?.address || 
+    (sos.location ? `${sos.location.lat?.toFixed(4)}, ${sos.location.lng?.toFixed(4)}` : 'Unknown location');
+  
+  return {
+    id: sos.id,
+    type: sos.status === 'resolved' ? 'success' : 'sos',
+    title: sos.status === 'resolved' ? 'SOS Request Resolved' : 'New SOS Request',
+    message: sos.status === 'resolved' 
+      ? 'Emergency request has been resolved' 
+      : 'Emergency assistance requested',
+    location: locationText,
+    time: formatDistanceToNow(new Date(sos.created_at), { addSuffix: true }),
+    read: sos.status === 'resolved',
+  };
+};
 
 const getNotificationIcon = (type: Notification['type']) => {
   switch (type) {
@@ -116,24 +77,75 @@ const getNotificationBg = (type: Notification['type'], read: boolean) => {
 };
 
 export function NotificationsDropdown() {
-  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  useEffect(() => {
+    // Fetch initial SOS requests
+    const fetchNotifications = async () => {
+      const { data, error } = await supabase
+        .from('sos_requests')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (!error && data) {
+        const sosNotifications = data.map((sos) => 
+          transformSOSToNotification(sos as unknown as SOSRequest)
+        );
+        setNotifications(sosNotifications);
+      }
+    };
+
+    fetchNotifications();
+
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel('sos-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'sos_requests'
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newNotification = transformSOSToNotification(payload.new as SOSRequest);
+            setNotifications(prev => [newNotification, ...prev].slice(0, 20));
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedNotification = transformSOSToNotification(payload.new as SOSRequest);
+            setNotifications(prev => 
+              prev.map(n => n.id === updatedNotification.id ? updatedNotification : n)
+            );
+          } else if (payload.eventType === 'DELETE') {
+            setNotifications(prev => prev.filter(n => n.id !== (payload.old as SOSRequest).id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const unreadCount = notifications.filter(n => !n.read && !readIds.has(n.id)).length;
 
   const markAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    );
+    setReadIds(prev => new Set([...prev, id]));
   };
 
   const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setReadIds(new Set(notifications.map(n => n.id)));
   };
 
   const dismissNotification = (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
+
+  const isRead = (notification: Notification) => notification.read || readIds.has(notification.id);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -141,7 +153,7 @@ export function NotificationsDropdown() {
         <button className="relative p-2 rounded-lg hover:bg-secondary/50 transition-colors">
           <Bell className="w-5 h-5 text-muted-foreground" />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-destructive text-destructive-foreground rounded-full text-[10px] font-bold flex items-center justify-center">
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-destructive text-destructive-foreground rounded-full text-[10px] font-bold flex items-center justify-center animate-pulse">
               {unreadCount}
             </span>
           )}
@@ -173,7 +185,7 @@ export function NotificationsDropdown() {
               {notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`p-3 hover:bg-secondary/20 transition-colors cursor-pointer ${getNotificationBg(notification.type, notification.read)}`}
+                  className={`p-3 hover:bg-secondary/20 transition-colors cursor-pointer ${getNotificationBg(notification.type, isRead(notification))}`}
                   onClick={() => markAsRead(notification.id)}
                 >
                   <div className="flex items-start gap-3">
@@ -182,7 +194,7 @@ export function NotificationsDropdown() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <p className={`text-sm font-medium truncate ${notification.read ? 'text-muted-foreground' : 'text-foreground'}`}>
+                        <p className={`text-sm font-medium truncate ${isRead(notification) ? 'text-muted-foreground' : 'text-foreground'}`}>
                           {notification.title}
                         </p>
                         <button
@@ -195,7 +207,7 @@ export function NotificationsDropdown() {
                           <X className="w-3 h-3 text-muted-foreground" />
                         </button>
                       </div>
-                      <p className={`text-xs mt-0.5 ${notification.read ? 'text-muted-foreground/70' : 'text-muted-foreground'}`}>
+                      <p className={`text-xs mt-0.5 ${isRead(notification) ? 'text-muted-foreground/70' : 'text-muted-foreground'}`}>
                         {notification.message}
                       </p>
                       <div className="flex items-center gap-2 mt-1.5">

@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { QuantumLoader } from '@/components/ui/QuantumLoader';
 import { OperationsMap } from '@/components/map/OperationsMap';
+import { FleetManager } from '@/components/fleet/FleetManager';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -46,6 +47,14 @@ interface MapMarker {
   label: string;
 }
 
+interface FleetVehicle {
+  id: string;
+  vehicle_number: string;
+  vehicle_type: string;
+  status: string;
+  current_location: { lat: number; lng: number } | null;
+}
+
 export default function OperatorDashboard() {
   const { user } = useAuth();
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -59,6 +68,7 @@ export default function OperatorDashboard() {
   });
   const [sosRequests, setSosRequests] = useState<SOSRequest[]>([]);
   const [volunteerLocations, setVolunteerLocations] = useState<VolunteerLocation[]>([]);
+  const [fleetVehicles, setFleetVehicles] = useState<FleetVehicle[]>([]);
   const [mapboxToken, setMapboxToken] = useState(() => localStorage.getItem('mapbox_token') || '');
   const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
   const [routes, setRoutes] = useState<RouteOverride[]>([
@@ -71,6 +81,7 @@ export default function OperatorDashboard() {
     fetchStats();
     fetchSOSRequests();
     fetchVolunteerLocations();
+    fetchFleetVehicles();
 
     // Subscribe to real-time SOS updates
     const sosChannel = supabase
@@ -90,9 +101,19 @@ export default function OperatorDashboard() {
       })
       .subscribe();
 
+    // Subscribe to real-time fleet vehicle updates
+    const fleetChannel = supabase
+      .channel('fleet_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fleet_vehicles' }, () => {
+        fetchFleetVehicles();
+        fetchStats();
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(sosChannel);
       supabase.removeChannel(volunteerChannel);
+      supabase.removeChannel(fleetChannel);
     };
   }, []);
 
@@ -146,7 +167,25 @@ export default function OperatorDashboard() {
     }
   };
 
-  // Build map markers from SOS requests and volunteer locations
+  const fetchFleetVehicles = async () => {
+    const { data } = await supabase
+      .from('fleet_vehicles')
+      .select('id, vehicle_number, vehicle_type, status, current_location')
+      .in('status', ['available', 'in_use']);
+
+    if (data) {
+      const mapped = data.map((v) => ({
+        id: v.id,
+        vehicle_number: v.vehicle_number,
+        vehicle_type: v.vehicle_type,
+        status: v.status,
+        current_location: v.current_location as { lat: number; lng: number } | null
+      }));
+      setFleetVehicles(mapped);
+    }
+  };
+
+  // Build map markers from SOS requests, volunteer locations, and fleet vehicles
   useEffect(() => {
     const markers: MapMarker[] = [];
 
@@ -172,14 +211,28 @@ export default function OperatorDashboard() {
           id: `vol-${vol.id}`,
           lat: loc.lat,
           lng: loc.lng,
-          type: 'vehicle',
+          type: 'resource',
           label: `Volunteer ${vol.status === 'en_route' ? '(En Route)' : '(Idle)'}`
         });
       }
     });
 
+    // Add fleet vehicle markers
+    fleetVehicles.forEach((vehicle) => {
+      const loc = vehicle.current_location;
+      if (loc?.lat && loc?.lng) {
+        markers.push({
+          id: `fleet-${vehicle.id}`,
+          lat: loc.lat,
+          lng: loc.lng,
+          type: 'vehicle',
+          label: `${vehicle.vehicle_number} (${vehicle.vehicle_type})`
+        });
+      }
+    });
+
     setMapMarkers(markers);
-  }, [sosRequests, volunteerLocations]);
+  }, [sosRequests, volunteerLocations, fleetVehicles]);
 
   const saveMapboxToken = (token: string) => {
     localStorage.setItem('mapbox_token', token);
@@ -378,10 +431,10 @@ export default function OperatorDashboard() {
               <span className="w-3 h-3 rounded-full bg-[#f59e0b]" /> SOS Alerts
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded-full bg-[#00d9ff]" /> Volunteers
+              <span className="w-3 h-3 rounded-full bg-[#00d9ff]" /> Fleet Vehicles
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded-full bg-[#22c55e]" /> Shelters
+              <span className="w-3 h-3 rounded-full bg-[#a855f7]" /> Volunteers
             </span>
           </div>
         </GlassCard>
@@ -580,6 +633,9 @@ export default function OperatorDashboard() {
             </div>
           </GlassCard>
         </div>
+
+        {/* Fleet Management */}
+        <FleetManager />
 
       </div>
     </Layout>

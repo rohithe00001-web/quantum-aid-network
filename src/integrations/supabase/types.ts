@@ -47,6 +47,48 @@ export type Database = {
         }
         Relationships: []
       }
+      fleet_vehicles: {
+        Row: {
+          assigned_volunteer_id: string | null
+          capacity: number | null
+          created_at: string
+          current_location: Json | null
+          fuel_level: number | null
+          id: string
+          last_maintenance: string | null
+          status: string
+          updated_at: string
+          vehicle_number: string
+          vehicle_type: string
+        }
+        Insert: {
+          assigned_volunteer_id?: string | null
+          capacity?: number | null
+          created_at?: string
+          current_location?: Json | null
+          fuel_level?: number | null
+          id?: string
+          last_maintenance?: string | null
+          status?: string
+          updated_at?: string
+          vehicle_number: string
+          vehicle_type?: string
+        }
+        Update: {
+          assigned_volunteer_id?: string | null
+          capacity?: number | null
+          created_at?: string
+          current_location?: Json | null
+          fuel_level?: number | null
+          id?: string
+          last_maintenance?: string | null
+          status?: string
+          updated_at?: string
+          vehicle_number?: string
+          vehicle_type?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

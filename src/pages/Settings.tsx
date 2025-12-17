@@ -27,11 +27,14 @@ import {
   VolumeX,
   MapPin,
   Wifi,
-  WifiOff
+  WifiOff,
+  LogOut
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function Settings() {
-  const { user, role } = useAuth();
+  const { user, role, signOut } = useAuth();
+  const navigate = useNavigate();
   
   // Profile settings
   const [fullName, setFullName] = useState("");
@@ -341,6 +344,24 @@ export default function Settings() {
                   <Save className="h-4 w-4 mr-2" />
                   Save Profile
                 </Button>
+                
+                <Separator className="my-4" />
+                
+                <div className="space-y-2">
+                  <Label className="text-destructive">Account Actions</Label>
+                  <Button 
+                    variant="destructive" 
+                    onClick={async () => {
+                      await signOut();
+                      navigate('/auth');
+                      toast.success("Logged out successfully");
+                    }}
+                    className="w-full"
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </Button>
+                </div>
               </div>
             </GlassCard>
           </TabsContent>

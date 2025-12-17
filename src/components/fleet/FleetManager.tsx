@@ -40,7 +40,9 @@ export function FleetManager({ compact = false }: FleetManagerProps) {
     vehicle_type: 'truck',
     status: 'available',
     capacity: 100,
-    fuel_level: 100
+    fuel_level: 100,
+    lat: '12.9750',
+    lng: '77.6070'
   });
 
   useEffect(() => {
@@ -90,14 +92,16 @@ export function FleetManager({ compact = false }: FleetManagerProps) {
       return;
     }
 
-    // Default location: Bangalore area (MG Road vicinity)
+    const lat = parseFloat(formData.lat) || 12.9750;
+    const lng = parseFloat(formData.lng) || 77.6070;
+
     const { error } = await supabase.from('fleet_vehicles').insert({
       vehicle_number: formData.vehicle_number,
       vehicle_type: formData.vehicle_type,
       status: formData.status,
       capacity: formData.capacity,
       fuel_level: formData.fuel_level,
-      current_location: { lat: 12.9750 + (Math.random() - 0.5) * 0.02, lng: 77.6070 + (Math.random() - 0.5) * 0.02 }
+      current_location: { lat, lng }
     });
 
     if (error) {
@@ -110,6 +114,9 @@ export function FleetManager({ compact = false }: FleetManagerProps) {
   };
 
   const updateVehicle = async (id: string) => {
+    const lat = parseFloat(formData.lat) || 12.9750;
+    const lng = parseFloat(formData.lng) || 77.6070;
+
     const { error } = await supabase
       .from('fleet_vehicles')
       .update({
@@ -117,7 +124,8 @@ export function FleetManager({ compact = false }: FleetManagerProps) {
         vehicle_type: formData.vehicle_type,
         status: formData.status,
         capacity: formData.capacity,
-        fuel_level: formData.fuel_level
+        fuel_level: formData.fuel_level,
+        current_location: { lat, lng }
       })
       .eq('id', id);
 
@@ -164,7 +172,9 @@ export function FleetManager({ compact = false }: FleetManagerProps) {
       vehicle_type: 'truck',
       status: 'available',
       capacity: 100,
-      fuel_level: 100
+      fuel_level: 100,
+      lat: '12.9750',
+      lng: '77.6070'
     });
     setShowAddForm(false);
     setEditingId(null);
@@ -176,7 +186,9 @@ export function FleetManager({ compact = false }: FleetManagerProps) {
       vehicle_type: vehicle.vehicle_type,
       status: vehicle.status,
       capacity: vehicle.capacity,
-      fuel_level: vehicle.fuel_level
+      fuel_level: vehicle.fuel_level,
+      lat: vehicle.current_location?.lat?.toString() || '12.9750',
+      lng: vehicle.current_location?.lng?.toString() || '77.6070'
     });
     setEditingId(vehicle.id);
     setShowAddForm(true);
@@ -307,15 +319,39 @@ export function FleetManager({ compact = false }: FleetManagerProps) {
               />
             </div>
 
-            <div className="flex items-end">
-              <Button 
-                onClick={() => editingId ? updateVehicle(editingId) : addVehicle()}
-                className="w-full"
-              >
-                <Check className="w-4 h-4 mr-1" />
-                {editingId ? 'Save Changes' : 'Add Vehicle'}
-              </Button>
+            <div>
+              <Label className="text-xs text-muted-foreground">Latitude</Label>
+              <Input
+                type="number"
+                step="any"
+                value={formData.lat}
+                onChange={(e) => setFormData(f => ({ ...f, lat: e.target.value }))}
+                placeholder="12.9750"
+                className="mt-1 bg-secondary/50"
+              />
             </div>
+
+            <div>
+              <Label className="text-xs text-muted-foreground">Longitude</Label>
+              <Input
+                type="number"
+                step="any"
+                value={formData.lng}
+                onChange={(e) => setFormData(f => ({ ...f, lng: e.target.value }))}
+                placeholder="77.6070"
+                className="mt-1 bg-secondary/50"
+              />
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <Button 
+              onClick={() => editingId ? updateVehicle(editingId) : addVehicle()}
+              className="w-full"
+            >
+              <Check className="w-4 h-4 mr-1" />
+              {editingId ? 'Save Changes' : 'Add Vehicle'}
+            </Button>
           </div>
         </div>
       )}

@@ -142,7 +142,7 @@ export function OperationsMap({ mapboxToken, markers = [] }: OperationsMapProps)
 
   if (!mapboxToken) {
     return (
-      <div className="h-full flex items-center justify-center bg-secondary/30">
+      <div className="w-full h-full min-h-[200px] flex items-center justify-center bg-secondary/30 rounded-lg">
         <div className="text-center space-y-2">
           <MapPin className="w-10 h-10 text-muted-foreground mx-auto" />
           <p className="text-sm text-muted-foreground">Enter Mapbox token to enable map</p>
@@ -181,7 +181,7 @@ export function OperationsMap({ mapboxToken, markers = [] }: OperationsMapProps)
   }
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full min-h-[200px]">
       <div ref={mapContainer} className="absolute inset-0" />
     </div>
   );

@@ -11,7 +11,8 @@ import { toast } from '@/hooks/use-toast';
 import { QuantumLoader } from '@/components/ui/QuantumLoader';
 import { 
   AlertCircle, Clock, MapPin, Droplets, 
-  Pill, Baby, Package, Send, CheckCircle
+  Pill, Baby, Package, Send, CheckCircle,
+  XCircle, RefreshCw, Phone, User, Settings
 } from 'lucide-react';
 
 interface ResourceNeeds {
@@ -23,11 +24,20 @@ interface ResourceNeeds {
   other: string;
 }
 
+interface SOSRequest {
+  id: string;
+  status: string;
+  eta_minutes: number | null;
+  assigned_volunteer_id: string | null;
+  created_at: string;
+}
+
 export default function UserDashboard() {
   const { user } = useAuth();
-  const [sosStatus, setSosStatus] = useState<'none' | 'pending' | 'help_coming'>('none');
+  const [sosStatus, setSosStatus] = useState<'none' | 'pending' | 'help_coming' | 'resolved'>('none');
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentSOS, setCurrentSOS] = useState<SOSRequest | null>(null);
   const [resources, setResources] = useState<ResourceNeeds>({
     water: false,
     food: false,
@@ -36,28 +46,72 @@ export default function UserDashboard() {
     babyFormula: false,
     other: ''
   });
+  const [userProfile, setUserProfile] = useState<{ full_name: string | null; phone: string | null } | null>(null);
 
   useEffect(() => {
     if (user) {
       checkExistingSOS();
+      fetchProfile();
+
+      // Subscribe to SOS updates
+      const channel = supabase
+        .channel('user_sos_updates')
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'sos_requests',
+          filter: `user_id=eq.${user.id}`
+        }, (payload) => {
+          const newData = payload.new as SOSRequest;
+          setCurrentSOS(newData);
+          if (newData.eta_minutes) {
+            setEtaMinutes(newData.eta_minutes);
+            setSosStatus('help_coming');
+          }
+          if (newData.status === 'resolved') {
+            setSosStatus('resolved');
+          }
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [user]);
+
+  const fetchProfile = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('profiles')
+      .select('full_name, phone')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    
+    if (data) {
+      setUserProfile(data);
+    }
+  };
 
   const checkExistingSOS = async () => {
     if (!user) return;
 
     const { data } = await supabase
       .from('sos_requests')
-      .select('status, eta_minutes')
+      .select('id, status, eta_minutes, assigned_volunteer_id, created_at')
       .eq('user_id', user.id)
-      .eq('status', 'pending')
+      .in('status', ['pending', 'assigned'])
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (data) {
-      setSosStatus('pending');
+      setCurrentSOS(data);
       if (data.eta_minutes) {
         setEtaMinutes(data.eta_minutes);
         setSosStatus('help_coming');
+      } else {
+        setSosStatus('pending');
       }
     }
   };
@@ -111,13 +165,8 @@ export default function UserDashboard() {
         });
       }
 
+      setCurrentSOS(sosData);
       setSosStatus('pending');
-      
-      // Simulate ETA calculation (in real app, this would come from quantum routing)
-      setTimeout(() => {
-        setEtaMinutes(Math.floor(Math.random() * 30) + 10);
-        setSosStatus('help_coming');
-      }, 2000);
 
       toast({
         title: 'SOS Sent!',
@@ -134,12 +183,98 @@ export default function UserDashboard() {
     }
   };
 
+  const cancelSOS = async () => {
+    if (!user || !currentSOS) return;
+
+    try {
+      await supabase
+        .from('sos_requests')
+        .update({ status: 'cancelled', resolved_at: new Date().toISOString() })
+        .eq('id', currentSOS.id);
+
+      setSosStatus('none');
+      setCurrentSOS(null);
+      setEtaMinutes(null);
+      setResources({
+        water: false,
+        food: false,
+        medicine: false,
+        insulin: false,
+        babyFormula: false,
+        other: ''
+      });
+
+      toast({
+        title: 'SOS Cancelled',
+        description: 'Your request has been cancelled.'
+      });
+    } catch (error) {
+      toast({
+        title: 'Cancel Failed',
+        description: 'Could not cancel SOS request',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const markResolved = async () => {
+    if (!user || !currentSOS) return;
+
+    try {
+      await supabase
+        .from('sos_requests')
+        .update({ status: 'resolved', resolved_at: new Date().toISOString() })
+        .eq('id', currentSOS.id);
+
+      setSosStatus('none');
+      setCurrentSOS(null);
+      setEtaMinutes(null);
+
+      toast({
+        title: 'Marked as Resolved',
+        description: 'Thank you! Stay safe.'
+      });
+    } catch (error) {
+      toast({
+        title: 'Update Failed',
+        description: 'Could not update status',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const updateProfile = async (field: string, value: string) => {
+    if (!user) return;
+
+    try {
+      await supabase
+        .from('profiles')
+        .update({ [field]: value, updated_at: new Date().toISOString() })
+        .eq('user_id', user.id);
+
+      fetchProfile();
+      toast({
+        title: 'Profile Updated',
+        description: `Your ${field.replace('_', ' ')} has been updated.`
+      });
+    } catch (error) {
+      toast({
+        title: 'Update Failed',
+        description: 'Could not update profile',
+        variant: 'destructive'
+      });
+    }
+  };
+
   return (
     <Layout>
       <div className="space-y-6 max-w-2xl mx-auto">
         <div className="text-center">
           <h1 className="text-2xl font-display font-bold text-foreground">Emergency Assistance</h1>
           <p className="text-muted-foreground">Civilian Portal</p>
+          {userProfile?.full_name && (
+            <p className="text-sm text-quantum-cyan mt-1">Welcome, {userProfile.full_name}</p>
+          )}
         </div>
 
         {/* One-Click SOS */}
@@ -175,6 +310,14 @@ export default function UserDashboard() {
               <p className="text-sm text-muted-foreground mt-2">
                 Quantum routing algorithm calculating optimal response
               </p>
+              <Button
+                variant="outline"
+                onClick={cancelSOS}
+                className="mt-4 text-red-400 border-red-400/30 hover:bg-red-400/10"
+              >
+                <XCircle className="w-4 h-4 mr-2" />
+                Cancel SOS
+              </Button>
             </div>
           )}
 
@@ -192,6 +335,24 @@ export default function UserDashboard() {
               <p className="text-sm text-muted-foreground mt-2">
                 Estimated arrival time (calculated by quantum routing)
               </p>
+              <div className="flex gap-2 justify-center mt-4">
+                <Button
+                  variant="outline"
+                  onClick={markResolved}
+                  className="text-green-400 border-green-400/30 hover:bg-green-400/10"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Help Arrived
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={cancelSOS}
+                  className="text-red-400 border-red-400/30 hover:bg-red-400/10"
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Cancel
+                </Button>
+              </div>
             </div>
           )}
         </GlassCard>
@@ -209,7 +370,7 @@ export default function UserDashboard() {
             </p>
 
             <div className="grid grid-cols-2 gap-4 mb-4">
-              <label className="flex items-center gap-3 p-3 bg-secondary/30 rounded-lg cursor-pointer hover:bg-secondary/50">
+              <label className="flex items-center gap-3 p-3 bg-secondary/30 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors">
                 <Checkbox
                   checked={resources.water}
                   onCheckedChange={(checked) => setResources(r => ({ ...r, water: !!checked }))}
@@ -218,7 +379,7 @@ export default function UserDashboard() {
                 <span className="text-foreground">Water</span>
               </label>
 
-              <label className="flex items-center gap-3 p-3 bg-secondary/30 rounded-lg cursor-pointer hover:bg-secondary/50">
+              <label className="flex items-center gap-3 p-3 bg-secondary/30 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors">
                 <Checkbox
                   checked={resources.food}
                   onCheckedChange={(checked) => setResources(r => ({ ...r, food: !!checked }))}
@@ -227,7 +388,7 @@ export default function UserDashboard() {
                 <span className="text-foreground">Food</span>
               </label>
 
-              <label className="flex items-center gap-3 p-3 bg-secondary/30 rounded-lg cursor-pointer hover:bg-secondary/50">
+              <label className="flex items-center gap-3 p-3 bg-secondary/30 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors">
                 <Checkbox
                   checked={resources.medicine}
                   onCheckedChange={(checked) => setResources(r => ({ ...r, medicine: !!checked }))}
@@ -236,7 +397,7 @@ export default function UserDashboard() {
                 <span className="text-foreground">Medicine</span>
               </label>
 
-              <label className="flex items-center gap-3 p-3 bg-secondary/30 rounded-lg cursor-pointer hover:bg-secondary/50 border border-red-500/30">
+              <label className="flex items-center gap-3 p-3 bg-secondary/30 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors border border-red-500/30">
                 <Checkbox
                   checked={resources.insulin}
                   onCheckedChange={(checked) => setResources(r => ({ ...r, insulin: !!checked }))}
@@ -246,7 +407,7 @@ export default function UserDashboard() {
                 <span className="text-xs text-red-400 ml-auto">CRITICAL</span>
               </label>
 
-              <label className="flex items-center gap-3 p-3 bg-secondary/30 rounded-lg cursor-pointer hover:bg-secondary/50 col-span-2">
+              <label className="flex items-center gap-3 p-3 bg-secondary/30 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors col-span-2">
                 <Checkbox
                   checked={resources.babyFormula}
                   onCheckedChange={(checked) => setResources(r => ({ ...r, babyFormula: !!checked }))}
@@ -276,6 +437,9 @@ export default function UserDashboard() {
             <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
               <MapPin className="w-5 h-5 text-quantum-cyan" />
               Status Tracker
+              <Button size="sm" variant="ghost" onClick={checkExistingSOS} className="ml-auto">
+                <RefreshCw className="w-4 h-4" />
+              </Button>
             </h3>
 
             <div className="space-y-3">
@@ -313,6 +477,62 @@ export default function UserDashboard() {
             </div>
           </GlassCard>
         )}
+
+        {/* Quick Actions */}
+        <GlassCard className="p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Settings className="w-5 h-5 text-quantum-cyan" />
+            Quick Actions
+          </h3>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Button 
+              variant="outline" 
+              className="h-auto py-4 flex flex-col items-center gap-2"
+              onClick={() => {
+                if (navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => toast({ title: 'Location Updated', description: `Lat: ${pos.coords.latitude.toFixed(4)}, Lng: ${pos.coords.longitude.toFixed(4)}` }),
+                    () => toast({ title: 'Location Error', description: 'Could not get location', variant: 'destructive' })
+                  );
+                }
+              }}
+            >
+              <MapPin className="w-5 h-5" />
+              <span className="text-sm">Update Location</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              className="h-auto py-4 flex flex-col items-center gap-2"
+              onClick={() => window.open('tel:911')}
+            >
+              <Phone className="w-5 h-5" />
+              <span className="text-sm">Call 911</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              className="h-auto py-4 flex flex-col items-center gap-2"
+              onClick={() => {
+                const name = prompt('Enter your name:');
+                if (name) updateProfile('full_name', name);
+              }}
+            >
+              <User className="w-5 h-5" />
+              <span className="text-sm">Update Name</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              className="h-auto py-4 flex flex-col items-center gap-2"
+              onClick={() => {
+                const phone = prompt('Enter your phone:');
+                if (phone) updateProfile('phone', phone);
+              }}
+            >
+              <Phone className="w-5 h-5" />
+              <span className="text-sm">Update Phone</span>
+            </Button>
+          </div>
+        </GlassCard>
       </div>
     </Layout>
   );

@@ -3,6 +3,8 @@ import { Layout } from '@/components/layout/Layout';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { MetricCard } from '@/components/ui/MetricCard';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { QuantumLoader } from '@/components/ui/QuantumLoader';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,19 +12,98 @@ import { toast } from '@/hooks/use-toast';
 import { 
   Play, Map, Sliders, FlaskConical, 
   Truck, Users, AlertTriangle, Zap,
-  BarChart3, RefreshCw
+  BarChart3, RefreshCw, Eye, ArrowUp, ArrowDown
 } from 'lucide-react';
+
+interface SOSRequest {
+  id: string;
+  status: string;
+  location: { lat: number; lng: number };
+  created_at: string;
+}
+
+interface RouteOverride {
+  id: string;
+  name: string;
+  status: 'blocked' | 'open' | 'congested';
+  priority: 'high' | 'medium' | 'low';
+}
 
 export default function OperatorDashboard() {
   const { user } = useAuth();
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationType, setOptimizationType] = useState<string | null>(null);
+  const [simulationRunning, setSimulationRunning] = useState<string | null>(null);
+  const [priorityOverrideEnabled, setPriorityOverrideEnabled] = useState(false);
   const [stats, setStats] = useState({
-    activeVehicles: 24,
-    pendingSOS: 12,
-    sheltersActive: 8,
-    resourcesDeployed: 156
+    activeVehicles: 0,
+    pendingSOS: 0,
+    sheltersActive: 0,
+    resourcesDeployed: 0
   });
+  const [sosRequests, setSosRequests] = useState<SOSRequest[]>([]);
+  const [routes, setRoutes] = useState<RouteOverride[]>([
+    { id: '1', name: 'Highway 101 - North', status: 'blocked', priority: 'high' },
+    { id: '2', name: 'Main Street Bridge', status: 'congested', priority: 'medium' },
+    { id: '3', name: 'Downtown Corridor', status: 'open', priority: 'low' }
+  ]);
+
+  useEffect(() => {
+    fetchStats();
+    fetchSOSRequests();
+
+    // Subscribe to real-time SOS updates
+    const channel = supabase
+      .channel('sos_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sos_requests' }, () => {
+        fetchSOSRequests();
+        fetchStats();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchStats = async () => {
+    // Fetch pending SOS count
+    const { count: sosCount } = await supabase
+      .from('sos_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending');
+
+    // Fetch active volunteers
+    const { count: volunteerCount } = await supabase
+      .from('volunteer_assignments')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'en_route');
+
+    // Fetch resource requests
+    const { count: resourceCount } = await supabase
+      .from('resource_requests')
+      .select('*', { count: 'exact', head: true });
+
+    setStats({
+      activeVehicles: volunteerCount || 0,
+      pendingSOS: sosCount || 0,
+      sheltersActive: 8, // Static for now
+      resourcesDeployed: resourceCount || 0
+    });
+  };
+
+  const fetchSOSRequests = async () => {
+    const { data } = await supabase
+      .from('sos_requests')
+      .select('id, status, location, created_at')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (data) {
+      setSosRequests(data as SOSRequest[]);
+    }
+  };
 
   const executeQuantumOptimization = async (type: string, algorithm: string) => {
     if (!user) return;
@@ -31,13 +112,13 @@ export default function OperatorDashboard() {
     setOptimizationType(type);
 
     try {
-      // Log the operation
       const { error } = await supabase.from('quantum_operations').insert({
         operator_id: user.id,
         operation_type: type,
         algorithm: algorithm,
         status: 'running',
-        parameters: { initiated_at: new Date().toISOString() }
+        parameters: { initiated_at: new Date().toISOString() },
+        priority_override: priorityOverrideEnabled
       });
 
       if (error) throw error;
@@ -45,10 +126,19 @@ export default function OperatorDashboard() {
       // Simulate quantum processing
       await new Promise(resolve => setTimeout(resolve, 3000));
 
+      // Update operation status
+      await supabase.from('quantum_operations')
+        .update({ status: 'completed', completed_at: new Date().toISOString() })
+        .eq('operator_id', user.id)
+        .eq('operation_type', type)
+        .eq('status', 'running');
+
       toast({
         title: 'Optimization Complete',
         description: `${type} optimization finished using ${algorithm}`
       });
+
+      fetchStats();
     } catch (error) {
       toast({
         title: 'Optimization Failed',
@@ -61,6 +151,122 @@ export default function OperatorDashboard() {
     }
   };
 
+  const runSimulation = async (type: string) => {
+    if (!user) return;
+
+    setSimulationRunning(type);
+
+    try {
+      await supabase.from('quantum_operations').insert({
+        operator_id: user.id,
+        operation_type: `Simulation: ${type}`,
+        algorithm: 'VQE',
+        status: 'running',
+        is_simulation: true,
+        parameters: { scenario: type, initiated_at: new Date().toISOString() }
+      });
+
+      // Simulate VQE processing
+      await new Promise(resolve => setTimeout(resolve, 4000));
+
+      toast({
+        title: 'Simulation Complete',
+        description: `${type} simulation finished. Results available in reports.`
+      });
+    } catch (error) {
+      toast({
+        title: 'Simulation Failed',
+        description: 'An error occurred during simulation',
+        variant: 'destructive'
+      });
+    } finally {
+      setSimulationRunning(null);
+    }
+  };
+
+  const updateRouteStatus = (routeId: string, newStatus: 'blocked' | 'open' | 'congested') => {
+    setRoutes(routes.map(r => r.id === routeId ? { ...r, status: newStatus } : r));
+    toast({
+      title: 'Route Updated',
+      description: `Route status changed to ${newStatus}`
+    });
+  };
+
+  const updateRoutePriority = (routeId: string, direction: 'up' | 'down') => {
+    const priorities: ('high' | 'medium' | 'low')[] = ['low', 'medium', 'high'];
+    setRoutes(routes.map(r => {
+      if (r.id === routeId) {
+        const currentIndex = priorities.indexOf(r.priority);
+        const newIndex = direction === 'up' 
+          ? Math.min(currentIndex + 1, 2)
+          : Math.max(currentIndex - 1, 0);
+        return { ...r, priority: priorities[newIndex] };
+      }
+      return r;
+    }));
+    toast({
+      title: 'Priority Updated',
+      description: `Route priority ${direction === 'up' ? 'increased' : 'decreased'}`
+    });
+  };
+
+  const assignVolunteerToSOS = async (sosId: string) => {
+    try {
+      // Find an idle volunteer
+      const { data: volunteer } = await supabase
+        .from('volunteer_assignments')
+        .select('volunteer_id')
+        .eq('status', 'idle')
+        .limit(1)
+        .maybeSingle();
+
+      if (volunteer) {
+        await supabase.from('sos_requests')
+          .update({ 
+            assigned_volunteer_id: volunteer.volunteer_id,
+            eta_minutes: Math.floor(Math.random() * 20) + 5
+          })
+          .eq('id', sosId);
+
+        toast({
+          title: 'Volunteer Assigned',
+          description: 'A volunteer has been dispatched to this location'
+        });
+        fetchSOSRequests();
+      } else {
+        toast({
+          title: 'No Volunteers Available',
+          description: 'All volunteers are currently busy',
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Assignment Failed',
+        description: 'Could not assign volunteer',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'blocked': return 'bg-red-500/20 text-red-400';
+      case 'congested': return 'bg-yellow-500/20 text-yellow-400';
+      case 'open': return 'bg-green-500/20 text-green-400';
+      default: return 'bg-gray-500/20 text-gray-400';
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'text-red-400';
+      case 'medium': return 'text-yellow-400';
+      case 'low': return 'text-green-400';
+      default: return 'text-gray-400';
+    }
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -69,7 +275,14 @@ export default function OperatorDashboard() {
             <h1 className="text-2xl font-display font-bold text-foreground">Operator Command Center</h1>
             <p className="text-muted-foreground">Dispatcher / Commander Interface</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={priorityOverrideEnabled}
+                onCheckedChange={setPriorityOverrideEnabled}
+              />
+              <Label className="text-sm text-muted-foreground">Priority Override</Label>
+            </div>
             <span className="px-3 py-1 text-xs bg-quantum-cyan/20 text-quantum-cyan rounded-full border border-quantum-cyan/30">
               COMMANDER ACCESS
             </span>
@@ -79,18 +292,19 @@ export default function OperatorDashboard() {
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
-            label="Active Vehicles"
+            label="Active Volunteers"
             value={stats.activeVehicles}
             icon={Truck}
             trend="up"
-            subValue="Fleet deployed"
+            subValue="Currently en route"
           />
           <MetricCard
             label="Pending SOS"
             value={stats.pendingSOS}
             icon={AlertTriangle}
-            trend="down"
+            trend={stats.pendingSOS > 5 ? "up" : "down"}
             subValue="Awaiting response"
+            variant={stats.pendingSOS > 10 ? "warning" : "default"}
           />
           <MetricCard
             label="Shelters Active"
@@ -100,11 +314,11 @@ export default function OperatorDashboard() {
             subValue="Receiving victims"
           />
           <MetricCard
-            label="Resources Deployed"
+            label="Resource Requests"
             value={stats.resourcesDeployed}
             icon={BarChart3}
             trend="up"
-            subValue="Units distributed"
+            subValue="Total requests"
           />
         </div>
 
@@ -113,6 +327,11 @@ export default function OperatorDashboard() {
           <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
             <Zap className="w-5 h-5 text-quantum-cyan" />
             Execute Quantum Optimization
+            {priorityOverrideEnabled && (
+              <span className="ml-2 px-2 py-0.5 text-xs bg-red-500/20 text-red-400 rounded">
+                PRIORITY OVERRIDE ACTIVE
+              </span>
+            )}
           </h3>
 
           {isOptimizing ? (
@@ -153,74 +372,114 @@ export default function OperatorDashboard() {
         </GlassCard>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Heatmap / God View */}
+          {/* Real-time SOS Alerts */}
           <GlassCard className="p-6">
             <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-              <Map className="w-5 h-5 text-quantum-cyan" />
-              God View - Operations Heatmap
+              <AlertTriangle className="w-5 h-5 text-red-400" />
+              Real-time SOS Alerts
+              <Button size="sm" variant="ghost" onClick={fetchSOSRequests} className="ml-auto">
+                <RefreshCw className="w-4 h-4" />
+              </Button>
             </h3>
 
-            <div className="aspect-video bg-secondary/30 rounded-lg flex items-center justify-center border border-border/30">
-              <div className="text-center space-y-2">
-                <Map className="w-12 h-12 text-muted-foreground mx-auto" />
-                <p className="text-muted-foreground">Full operations heatmap</p>
-                <p className="text-xs text-muted-foreground">Victims • Volunteers • Blocked Roads</p>
+            {sosRequests.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <AlertTriangle className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                <p>No pending SOS requests</p>
               </div>
-            </div>
-
-            <div className="mt-4 flex gap-4 text-xs">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-red-500" />
-                <span className="text-muted-foreground">High Priority</span>
+            ) : (
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {sosRequests.map((sos) => (
+                  <div key={sos.id} className="p-3 bg-red-500/10 rounded-lg border border-red-500/30">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-foreground font-medium">
+                        SOS #{sos.id.slice(0, 8)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(sos.created_at).toLocaleTimeString()}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Location: {(sos.location as any)?.lat?.toFixed(4)}, {(sos.location as any)?.lng?.toFixed(4)}
+                    </p>
+                    <Button 
+                      size="sm" 
+                      className="w-full bg-quantum-cyan/20 hover:bg-quantum-cyan/30 text-quantum-cyan"
+                      onClick={() => assignVolunteerToSOS(sos.id)}
+                    >
+                      Assign Volunteer
+                    </Button>
+                  </div>
+                ))}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-yellow-500" />
-                <span className="text-muted-foreground">Medium Priority</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-green-500" />
-                <span className="text-muted-foreground">Resolved</span>
-              </div>
-            </div>
+            )}
           </GlassCard>
 
-          {/* Priority Override */}
+          {/* Priority Override Controls */}
           <GlassCard className="p-6">
             <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
               <Sliders className="w-5 h-5 text-quantum-purple" />
               Priority Override Controls
             </h3>
 
-            <div className="space-y-4">
-              <div className="p-4 bg-secondary/30 rounded-lg border border-border/30">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-foreground">Route A - Highway 101</span>
-                  <span className="text-xs px-2 py-1 bg-red-500/20 text-red-400 rounded">BLOCKED</span>
+            <div className="space-y-3">
+              {routes.map((route) => (
+                <div key={route.id} className="p-4 bg-secondary/30 rounded-lg border border-border/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-foreground">{route.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs px-2 py-1 rounded ${getStatusColor(route.status)}`}>
+                        {route.status.toUpperCase()}
+                      </span>
+                      <span className={`text-xs ${getPriorityColor(route.priority)}`}>
+                        {route.priority.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    {route.status === 'blocked' && (
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-xs"
+                        onClick={() => updateRouteStatus(route.id, 'open')}
+                      >
+                        Force Open
+                      </Button>
+                    )}
+                    {route.status === 'open' && (
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-xs"
+                        onClick={() => updateRouteStatus(route.id, 'blocked')}
+                      >
+                        Mark Blocked
+                      </Button>
+                    )}
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="text-xs"
+                      onClick={() => updateRoutePriority(route.id, 'up')}
+                      disabled={route.priority === 'high'}
+                    >
+                      <ArrowUp className="w-3 h-3 mr-1" />
+                      Priority
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="text-xs"
+                      onClick={() => updateRoutePriority(route.id, 'down')}
+                      disabled={route.priority === 'low'}
+                    >
+                      <ArrowDown className="w-3 h-3 mr-1" />
+                      Priority
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="text-xs">
-                    Force Open
-                  </Button>
-                  <Button size="sm" variant="outline" className="text-xs">
-                    Re-route Traffic
-                  </Button>
-                </div>
-              </div>
-
-              <div className="p-4 bg-secondary/30 rounded-lg border border-border/30">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-foreground">Shelter B - Priority Upgrade</span>
-                  <span className="text-xs px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded">MEDIUM</span>
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="text-xs">
-                    Increase Priority
-                  </Button>
-                  <Button size="sm" variant="outline" className="text-xs">
-                    View Details
-                  </Button>
-                </div>
-              </div>
+              ))}
             </div>
           </GlassCard>
         </div>
@@ -236,26 +495,50 @@ export default function OperatorDashboard() {
             Run predictive simulations using Variational Quantum Eigensolver to model disaster scenarios before deploying resources.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button variant="outline" className="h-auto py-4">
-              <div className="flex flex-col items-center gap-1">
-                <span className="font-medium">Flood Spread Model</span>
-                <span className="text-xs text-muted-foreground">Predict 24hr expansion</span>
-              </div>
-            </Button>
-            <Button variant="outline" className="h-auto py-4">
-              <div className="flex flex-col items-center gap-1">
-                <span className="font-medium">Evacuation Scenario</span>
-                <span className="text-xs text-muted-foreground">Test route capacity</span>
-              </div>
-            </Button>
-            <Button variant="outline" className="h-auto py-4">
-              <div className="flex flex-col items-center gap-1">
-                <span className="font-medium">Resource Depletion</span>
-                <span className="text-xs text-muted-foreground">Supply timeline model</span>
-              </div>
-            </Button>
-          </div>
+          {simulationRunning ? (
+            <div className="flex flex-col items-center py-8">
+              <QuantumLoader size="lg" />
+              <p className="mt-4 text-quantum-cyan animate-pulse">
+                Running {simulationRunning} simulation...
+              </p>
+              <p className="text-sm text-muted-foreground">
+                VQE algorithm processing scenario
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Button 
+                variant="outline" 
+                className="h-auto py-4"
+                onClick={() => runSimulation('Flood Spread Model')}
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <span className="font-medium">Flood Spread Model</span>
+                  <span className="text-xs text-muted-foreground">Predict 24hr expansion</span>
+                </div>
+              </Button>
+              <Button 
+                variant="outline" 
+                className="h-auto py-4"
+                onClick={() => runSimulation('Evacuation Scenario')}
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <span className="font-medium">Evacuation Scenario</span>
+                  <span className="text-xs text-muted-foreground">Test route capacity</span>
+                </div>
+              </Button>
+              <Button 
+                variant="outline" 
+                className="h-auto py-4"
+                onClick={() => runSimulation('Resource Depletion')}
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <span className="font-medium">Resource Depletion</span>
+                  <span className="text-xs text-muted-foreground">Supply timeline model</span>
+                </div>
+              </Button>
+            </div>
+          )}
         </GlassCard>
       </div>
     </Layout>

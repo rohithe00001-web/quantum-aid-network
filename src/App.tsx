@@ -11,6 +11,7 @@ import EvacuationFlow from "./pages/EvacuationFlow";
 import GridRecovery from "./pages/GridRecovery";
 import QVisionAnalysis from "./pages/QVisionAnalysis";
 import Auth from "./pages/Auth";
+import Settings from "./pages/Settings";
 import AdminDashboard from "./pages/dashboards/AdminDashboard";
 import OperatorDashboard from "./pages/dashboards/OperatorDashboard";
 import VolunteerDashboard from "./pages/dashboards/VolunteerDashboard";
@@ -119,6 +120,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <QVisionAnalysis />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Settings />
           </ProtectedRoute>
         }
       />

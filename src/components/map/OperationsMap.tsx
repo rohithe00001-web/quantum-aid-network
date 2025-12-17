@@ -18,12 +18,12 @@ export function OperationsMap({ markers = [] }: OperationsMapProps) {
   const markerLayerRef = useRef<L.FeatureGroup | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
-  const colors = useMemo<Record<string, string>>(
+  const colors = useMemo<Record<string, { fill: string; label: string }>>(
     () => ({
-      vehicle: '#00d9ff',
-      shelter: '#22c55e',
-      alert: '#f59e0b',
-      resource: '#a855f7',
+      vehicle: { fill: '#00d9ff', label: 'Vehicles' },
+      shelter: { fill: '#22c55e', label: 'Shelters' },
+      alert: { fill: '#f59e0b', label: 'Alerts' },
+      resource: { fill: '#a855f7', label: 'Resources' },
     }),
     []
   );
@@ -84,36 +84,40 @@ export function OperationsMap({ markers = [] }: OperationsMapProps) {
 
     group.clearLayers();
 
-    // Use CircleMarkers for maximum visibility (no image assets, no CSS dependence)
+    // Use CircleMarkers with larger size for maximum visibility
     markers.forEach((m) => {
-      const color = colors[m.type];
+      const colorConfig = colors[m.type];
+      const fillColor = colorConfig?.fill || '#ffffff';
 
       const circle = L.circleMarker([m.lat, m.lng], {
         pane: 'markerPane',
-        radius: 8,
-        color: 'rgba(255,255,255,0.95)',
-        weight: 2,
-        fillColor: color,
-        fillOpacity: 1,
+        radius: 14,
+        color: '#ffffff',
+        weight: 3,
+        fillColor: fillColor,
+        fillOpacity: 0.9,
       });
 
       circle.bindTooltip(m.label, {
         direction: 'top',
-        offset: [0, -8],
-        opacity: 0.95,
+        offset: [0, -14],
+        opacity: 1,
+        className: 'leaflet-tooltip-custom',
       });
 
       circle.bindPopup(
         `
         <div style="color:#0a0f19;padding:8px;min-width:180px;">
           <div style="font-weight:700;font-size:14px;">${m.label}</div>
-          <div style="margin-top:4px;text-transform:capitalize;color:${color};font-weight:600;">${m.type}</div>
+          <div style="margin-top:4px;text-transform:capitalize;color:${fillColor};font-weight:600;">${m.type}</div>
         </div>
         `
       );
 
       circle.addTo(group);
     });
+
+    console.log(`[OperationsMap] Rendered ${markers.length} markers`);
 
     // Auto-focus markers so they are always visible
     if (markers.length > 0) {
@@ -135,6 +139,26 @@ export function OperationsMap({ markers = [] }: OperationsMapProps) {
       {mapReady && markers.length === 0 && (
         <div className="absolute bottom-2 left-2 bg-background/80 backdrop-blur-sm rounded px-2 py-1">
           <p className="text-xs text-muted-foreground">No sample markers to display</p>
+        </div>
+      )}
+      {/* Map Legend */}
+      {mapReady && markers.length > 0 && (
+        <div className="absolute bottom-3 right-3 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-border/50 z-[1000]">
+          <p className="text-xs font-semibold text-foreground mb-2">Legend</p>
+          <div className="space-y-1.5">
+            {Object.entries(colors).map(([key, config]) => (
+              <div key={key} className="flex items-center gap-2">
+                <span
+                  className="w-3 h-3 rounded-full border-2 border-white"
+                  style={{ backgroundColor: config.fill }}
+                />
+                <span className="text-xs text-muted-foreground">{config.label}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-2 pt-1 border-t border-border/50">
+            {markers.length} markers
+          </p>
         </div>
       )}
     </div>

@@ -5,19 +5,15 @@ import { MetricCard } from '@/components/ui/MetricCard';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { QuantumLoader } from '@/components/ui/QuantumLoader';
 import { OperationsMap } from '@/components/map/OperationsMap';
-import { FleetManager } from '@/components/fleet/FleetManager';
-import { ShelterManager } from '@/components/shelter/ShelterManager';
-import { VehicleDispatch } from '@/components/dispatch/VehicleDispatch';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { 
-  Play, Sliders, 
+  Play, 
   Truck, Users, AlertTriangle, Zap,
-  BarChart3, RefreshCw, ArrowUp, ArrowDown, Map, Building2
+  BarChart3, RefreshCw, Map, Building2
 } from 'lucide-react';
 
 interface SOSRequest {
@@ -27,12 +23,6 @@ interface SOSRequest {
   created_at: string;
 }
 
-interface RouteOverride {
-  id: string;
-  name: string;
-  status: 'blocked' | 'open' | 'congested';
-  priority: 'high' | 'medium' | 'low';
-}
 
 interface VolunteerLocation {
   id: string;
@@ -83,11 +73,6 @@ export default function OperatorDashboard() {
   const [fleetVehicles, setFleetVehicles] = useState<FleetVehicle[]>([]);
   const [shelters, setShelters] = useState<Shelter[]>([]);
   const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
-  const [routes, setRoutes] = useState<RouteOverride[]>([
-    { id: '1', name: 'Highway 101 - North', status: 'blocked', priority: 'high' },
-    { id: '2', name: 'Main Street Bridge', status: 'congested', priority: 'medium' },
-    { id: '3', name: 'Downtown Corridor', status: 'open', priority: 'low' }
-  ]);
 
   useEffect(() => {
     fetchStats();
@@ -331,32 +316,6 @@ export default function OperatorDashboard() {
     }
   };
 
-  const updateRouteStatus = (routeId: string, newStatus: 'blocked' | 'open' | 'congested') => {
-    setRoutes(routes.map(r => r.id === routeId ? { ...r, status: newStatus } : r));
-    toast({
-      title: 'Route Updated',
-      description: `Route status changed to ${newStatus}`
-    });
-  };
-
-  const updateRoutePriority = (routeId: string, direction: 'up' | 'down') => {
-    const priorities: ('high' | 'medium' | 'low')[] = ['low', 'medium', 'high'];
-    setRoutes(routes.map(r => {
-      if (r.id === routeId) {
-        const currentIndex = priorities.indexOf(r.priority);
-        const newIndex = direction === 'up' 
-          ? Math.min(currentIndex + 1, 2)
-          : Math.max(currentIndex - 1, 0);
-        return { ...r, priority: priorities[newIndex] };
-      }
-      return r;
-    }));
-    toast({
-      title: 'Priority Updated',
-      description: `Route priority ${direction === 'up' ? 'increased' : 'decreased'}`
-    });
-  };
-
   const assignVolunteerToSOS = async (sosId: string) => {
     try {
       // Find an idle volunteer
@@ -393,24 +352,6 @@ export default function OperatorDashboard() {
         description: 'Could not assign volunteer',
         variant: 'destructive'
       });
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'blocked': return 'bg-red-500/20 text-red-400';
-      case 'congested': return 'bg-yellow-500/20 text-yellow-400';
-      case 'open': return 'bg-green-500/20 text-green-400';
-      default: return 'bg-gray-500/20 text-gray-400';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'text-red-400';
-      case 'medium': return 'text-yellow-400';
-      case 'low': return 'text-green-400';
-      default: return 'text-gray-400';
     }
   };
 
@@ -589,84 +530,7 @@ export default function OperatorDashboard() {
             )}
           </GlassCard>
 
-          {/* Priority Override Controls */}
-          <GlassCard className="p-6">
-            <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-              <Sliders className="w-5 h-5 text-quantum-purple" />
-              Priority Override Controls
-            </h3>
-
-            <div className="space-y-3">
-              {routes.map((route) => (
-                <div key={route.id} className="p-4 bg-secondary/30 rounded-lg border border-border/30">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-foreground">{route.name}</span>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs px-2 py-1 rounded ${getStatusColor(route.status)}`}>
-                        {route.status.toUpperCase()}
-                      </span>
-                      <span className={`text-xs ${getPriorityColor(route.priority)}`}>
-                        {route.priority.toUpperCase()}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    {route.status === 'blocked' && (
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="text-xs"
-                        onClick={() => updateRouteStatus(route.id, 'open')}
-                      >
-                        Force Open
-                      </Button>
-                    )}
-                    {route.status === 'open' && (
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="text-xs"
-                        onClick={() => updateRouteStatus(route.id, 'blocked')}
-                      >
-                        Mark Blocked
-                      </Button>
-                    )}
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="text-xs"
-                      onClick={() => updateRoutePriority(route.id, 'up')}
-                      disabled={route.priority === 'high'}
-                    >
-                      <ArrowUp className="w-3 h-3 mr-1" />
-                      Priority
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="text-xs"
-                      onClick={() => updateRoutePriority(route.id, 'down')}
-                      disabled={route.priority === 'low'}
-                    >
-                      <ArrowDown className="w-3 h-3 mr-1" />
-                      Priority
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </GlassCard>
         </div>
-
-        {/* Vehicle Dispatch */}
-        <VehicleDispatch />
-
-        {/* Fleet & Shelter Management */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <FleetManager />
-          <ShelterManager />
-        </div>
-
       </div>
     </Layout>
   );

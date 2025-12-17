@@ -31,10 +31,19 @@ export function OperationsMap({ markers = [] }: OperationsMapProps) {
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
 
-    // Initialize map centered on Bangalore city
+    // Initialize map centered on Bangalore, restricted to India
+    const indiaBounds = L.latLngBounds(
+      L.latLng(6.5, 68.0),   // Southwest corner
+      L.latLng(35.5, 97.5)   // Northeast corner
+    );
+
     const map = L.map(mapContainer.current, {
       center: [12.9400, 77.6500],
       zoom: 12,
+      minZoom: 5,
+      maxZoom: 18,
+      maxBounds: indiaBounds,
+      maxBoundsViscosity: 1.0,
       zoomControl: true,
       preferCanvas: true,
     });

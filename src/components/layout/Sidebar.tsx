@@ -48,7 +48,7 @@ export function Sidebar() {
           </div>
           <div>
             <h1 className="font-semibold text-foreground tracking-tight">
-              Quantum<span className="text-primary">Logistics</span>
+              Opti<span className="text-primary">Relief</span>
             </h1>
             <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
               Disaster Response

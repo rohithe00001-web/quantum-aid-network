@@ -100,7 +100,7 @@ export default function Auth() {
         } else {
           toast({
             title: 'Account Created!',
-            description: 'Welcome to Quantum Logistics.'
+            description: 'Welcome to OptiRelief.'
           });
         }
       }
@@ -123,7 +123,7 @@ export default function Auth() {
               <Zap className="w-6 h-6 text-quantum-cyan" />
             </div>
             <span className="text-2xl font-display font-bold text-foreground">
-              Q-<span className="text-quantum-cyan">LOGISTICS</span>
+              Opti<span className="text-quantum-cyan">Relief</span>
             </span>
           </div>
           <p className="text-muted-foreground">

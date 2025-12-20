@@ -39,6 +39,7 @@ export default function UserDashboard() {
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentSOS, setCurrentSOS] = useState<SOSRequest | null>(null);
+  const [sosLocation, setSosLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [resources, setResources] = useState<ResourceNeeds>({
     water: false,
     food: false,
@@ -167,6 +168,7 @@ export default function UserDashboard() {
       }
 
       setCurrentSOS(sosData);
+      setSosLocation(location);
       setSosStatus('pending');
 
       toast({
@@ -195,6 +197,7 @@ export default function UserDashboard() {
 
       setSosStatus('none');
       setCurrentSOS(null);
+      setSosLocation(null);
       setEtaMinutes(null);
       setResources({
         water: false,
@@ -229,6 +232,7 @@ export default function UserDashboard() {
 
       setSosStatus('none');
       setCurrentSOS(null);
+      setSosLocation(null);
       setEtaMinutes(null);
 
       toast({
@@ -497,7 +501,7 @@ export default function UserDashboard() {
         </GlassCard>
 
         {/* Shelter Locator */}
-        <ShelterLocator />
+        <ShelterLocator userSOSLocation={sosLocation} />
       </div>
     </Layout>
   );

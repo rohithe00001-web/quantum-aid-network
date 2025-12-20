@@ -13,7 +13,7 @@ import { ShelterLocator } from '@/components/shelter/ShelterLocator';
 import { 
   AlertCircle, Clock, MapPin, Droplets, 
   Pill, Baby, Package, CheckCircle,
-  XCircle, RefreshCw, Phone
+  XCircle, RefreshCw, Phone, History
 } from 'lucide-react';
 
 interface ResourceNeeds {
@@ -33,6 +33,13 @@ interface SOSRequest {
   created_at: string;
 }
 
+interface SOSHistoryItem {
+  id: string;
+  status: string;
+  created_at: string;
+  resolved_at: string | null;
+}
+
 export default function UserDashboard() {
   const { user } = useAuth();
   const [sosStatus, setSosStatus] = useState<'none' | 'pending' | 'help_coming' | 'resolved'>('none');
@@ -49,11 +56,14 @@ export default function UserDashboard() {
     other: ''
   });
   const [userProfile, setUserProfile] = useState<{ full_name: string | null; phone: string | null } | null>(null);
+  const [sosHistory, setSosHistory] = useState<SOSHistoryItem[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   useEffect(() => {
     if (user) {
       checkExistingSOS();
       fetchProfile();
+      fetchSOSHistory();
 
       // Subscribe to SOS updates
       const channel = supabase
@@ -93,6 +103,24 @@ export default function UserDashboard() {
     if (data) {
       setUserProfile(data);
     }
+  };
+
+  const fetchSOSHistory = async () => {
+    if (!user) return;
+    setLoadingHistory(true);
+
+    const { data } = await supabase
+      .from('sos_requests')
+      .select('id, status, created_at, resolved_at')
+      .eq('user_id', user.id)
+      .in('status', ['resolved', 'cancelled'])
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (data) {
+      setSosHistory(data);
+    }
+    setLoadingHistory(false);
   };
 
   const checkExistingSOS = async () => {
@@ -276,6 +304,7 @@ export default function UserDashboard() {
         title: 'SOS Cancelled',
         description: 'Your request has been cancelled.'
       });
+      fetchSOSHistory();
     } catch (error) {
       toast({
         title: 'Cancel Failed',
@@ -303,6 +332,7 @@ export default function UserDashboard() {
         title: 'Marked as Resolved',
         description: 'Thank you! Stay safe.'
       });
+      fetchSOSHistory();
     } catch (error) {
       toast({
         title: 'Update Failed',
@@ -546,6 +576,61 @@ export default function UserDashboard() {
             </div>
           </GlassCard>
         )}
+
+        {/* SOS History */}
+        <GlassCard className="p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <History className="w-5 h-5 text-quantum-cyan" />
+            SOS History
+            <Button size="sm" variant="ghost" onClick={fetchSOSHistory} className="ml-auto" disabled={loadingHistory}>
+              <RefreshCw className={`w-4 h-4 ${loadingHistory ? 'animate-spin' : ''}`} />
+            </Button>
+          </h3>
+
+          {loadingHistory ? (
+            <div className="flex justify-center py-4">
+              <QuantumLoader size="sm" />
+            </div>
+          ) : sosHistory.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No past SOS requests
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {sosHistory.map((sos) => (
+                <div 
+                  key={sos.id} 
+                  className={`flex items-center justify-between p-3 rounded-lg border ${
+                    sos.status === 'resolved' 
+                      ? 'bg-green-500/10 border-green-500/30' 
+                      : 'bg-muted/30 border-border/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    {sos.status === 'resolved' ? (
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <XCircle className="w-5 h-5 text-muted-foreground" />
+                    )}
+                    <div>
+                      <p className="text-sm font-medium text-foreground capitalize">
+                        {sos.status}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(sos.created_at).toLocaleDateString()} at {new Date(sos.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                  {sos.resolved_at && (
+                    <span className="text-xs text-muted-foreground">
+                      Closed: {new Date(sos.resolved_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </GlassCard>
 
         {/* Emergency Contact */}
         <GlassCard className="p-6">

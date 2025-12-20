@@ -30,7 +30,11 @@ interface MapMarker {
   label: string;
 }
 
-export function ShelterLocator() {
+interface ShelterLocatorProps {
+  userSOSLocation?: { lat: number; lng: number } | null;
+}
+
+export function ShelterLocator({ userSOSLocation }: ShelterLocatorProps) {
   const [shelters, setShelters] = useState<Shelter[]>([]);
   const [markers, setMarkers] = useState<MapMarker[]>([]);
   const [loading, setLoading] = useState(false);
@@ -50,6 +54,11 @@ export function ShelterLocator() {
     };
   }, []);
 
+  // Update markers when userSOSLocation changes
+  useEffect(() => {
+    updateMarkers();
+  }, [shelters, userSOSLocation]);
+
   const getUserLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -67,6 +76,29 @@ export function ShelterLocator() {
     }
   };
 
+  const updateMarkers = () => {
+    const mapMarkers: MapMarker[] = shelters.map(s => ({
+      id: `shelter-${s.id}`,
+      lat: Number(s.latitude),
+      lng: Number(s.longitude),
+      type: 'shelter' as const,
+      label: `${s.name} (${s.current_occupancy}/${s.capacity})`
+    }));
+
+    // Add user's SOS location as an alert marker
+    if (userSOSLocation) {
+      mapMarkers.push({
+        id: 'user-sos',
+        lat: userSOSLocation.lat,
+        lng: userSOSLocation.lng,
+        type: 'alert',
+        label: 'Your SOS Location'
+      });
+    }
+
+    setMarkers(mapMarkers);
+  };
+
   const fetchShelters = async () => {
     setLoading(true);
     
@@ -78,16 +110,6 @@ export function ShelterLocator() {
 
     if (data) {
       setShelters(data);
-      
-      const mapMarkers: MapMarker[] = data.map(s => ({
-        id: `shelter-${s.id}`,
-        lat: Number(s.latitude),
-        lng: Number(s.longitude),
-        type: 'shelter' as const,
-        label: `${s.name} (${s.current_occupancy}/${s.capacity})`
-      }));
-      
-      setMarkers(mapMarkers);
     }
     
     setLoading(false);
@@ -139,9 +161,17 @@ export function ShelterLocator() {
           <OperationsMap markers={markers} />
         </div>
 
-        <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
-          <span className="w-3 h-3 rounded-full bg-[#22c55e]" />
-          <span>Green markers indicate open shelters</span>
+        <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground flex-wrap">
+          <span className="flex items-center gap-1">
+            <span className="w-3 h-3 rounded-full bg-[#22c55e]" />
+            Shelters
+          </span>
+          {userSOSLocation && (
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 rounded-full bg-[#f59e0b]" />
+              Your SOS
+            </span>
+          )}
         </div>
       </GlassCard>
 

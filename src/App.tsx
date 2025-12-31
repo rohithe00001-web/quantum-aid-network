@@ -16,6 +16,8 @@ import AdminDashboard from "./pages/dashboards/AdminDashboard";
 import OperatorDashboard from "./pages/dashboards/OperatorDashboard";
 import VolunteerDashboard from "./pages/dashboards/VolunteerDashboard";
 import UserDashboard from "./pages/dashboards/UserDashboard";
+import QVisionFeedPage from "./pages/admin/QVisionFeedPage";
+import UserManagementPage from "./pages/admin/UserManagementPage";
 import NotFound from "./pages/NotFound";
 import { QuantumLoader } from "./components/ui/QuantumLoader";
 
@@ -128,6 +130,22 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Settings />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hazard-feed"
+        element={
+          <ProtectedRoute>
+            <QVisionFeedPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/user-management"
+        element={
+          <ProtectedRoute>
+            <UserManagementPage />
           </ProtectedRoute>
         }
       />

@@ -9,6 +9,8 @@ import {
   ScanLine,
   Settings,
   Atom,
+  AlertCircle,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StatusIndicator } from "@/components/ui/StatusIndicator";
@@ -21,6 +23,8 @@ const navItems = [
   { icon: Car, label: "Evacuation Flow", path: "/evacuation", roles: ["admin", "operator", "volunteer"] },
   { icon: Zap, label: "Grid Recovery", path: "/grid", roles: ["admin", "operator", "volunteer"] },
   { icon: ScanLine, label: "Q-Vision Analysis", path: "/qvision", roles: ["admin", "operator", "volunteer"] },
+  { icon: AlertCircle, label: "Hazard Feed", path: "/hazard-feed", roles: ["admin", "operator"] },
+  { icon: Users, label: "User Management", path: "/user-management", roles: ["admin"] },
 ];
 
 export function Sidebar() {

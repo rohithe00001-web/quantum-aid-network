@@ -7,7 +7,7 @@ interface OperationsMapProps {
     id: string;
     lng: number;
     lat: number;
-    type: 'vehicle' | 'shelter' | 'alert' | 'resource';
+    type: 'vehicle' | 'shelter' | 'alert' | 'resource' | 'hazard';
     label: string;
   }[];
 }
@@ -24,6 +24,7 @@ export function OperationsMap({ markers = [] }: OperationsMapProps) {
       shelter: { fill: '#22c55e', label: 'Shelters' },
       alert: { fill: '#f59e0b', label: 'Alerts' },
       resource: { fill: '#a855f7', label: 'Resources' },
+      hazard: { fill: '#ef4444', label: 'Q-Vision Hazards' },
     }),
     []
   );

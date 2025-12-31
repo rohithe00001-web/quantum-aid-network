@@ -9,7 +9,7 @@ interface MapMarker {
   id: string;
   lng: number;
   lat: number;
-  type: 'vehicle' | 'shelter' | 'alert' | 'resource';
+  type: 'vehicle' | 'shelter' | 'alert' | 'resource' | 'hazard';
   label: string;
 }
 
@@ -18,6 +18,7 @@ interface SharedOperationsMapProps {
   showShelters?: boolean;
   showSOS?: boolean;
   showVolunteers?: boolean;
+  showHazards?: boolean;
   height?: string;
   title?: string;
 }
@@ -27,6 +28,7 @@ export function SharedOperationsMap({
   showShelters = true,
   showSOS = true,
   showVolunteers = true,
+  showHazards = true,
   height = 'h-80',
   title = 'Operations Map'
 }: SharedOperationsMapProps) {
@@ -70,10 +72,18 @@ export function SharedOperationsMap({
       channels.push(volChannel);
     }
 
+    if (showHazards) {
+      const hazardChannel = supabase
+        .channel('map-hazards')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'qvision_analyses' }, fetchMapData)
+        .subscribe();
+      channels.push(hazardChannel);
+    }
+
     return () => {
       channels.forEach(ch => supabase.removeChannel(ch));
     };
-  }, [showVehicles, showShelters, showSOS, showVolunteers]);
+  }, [showVehicles, showShelters, showSOS, showVolunteers, showHazards]);
 
   const fetchMapData = async () => {
     setLoading(true);
@@ -155,6 +165,31 @@ export function SharedOperationsMap({
       });
     }
 
+    if (showHazards) {
+      const { data: hazards } = await supabase
+        .from('qvision_analyses')
+        .select('id, location, summary, classifications, created_at')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      hazards?.forEach(h => {
+        const loc = h.location as { lat: number; lng: number } | null;
+        const classifications = h.classifications as Array<{ label: string; category: string }> | null;
+        const highestSeverity = classifications?.some(c => c.category === 'danger') ? '🔴' :
+                               classifications?.some(c => c.category === 'warning') ? '🟡' : '🟢';
+        if (loc?.lat && loc?.lng) {
+          newMarkers.push({
+            id: `hazard-${h.id}`,
+            lat: loc.lat,
+            lng: loc.lng,
+            type: 'hazard',
+            label: `${highestSeverity} ${h.summary?.slice(0, 40) || 'Hazard Report'}...`
+          });
+        }
+      });
+    }
+
     setMarkers(newMarkers);
     setLoading(false);
   };
@@ -194,6 +229,11 @@ export function SharedOperationsMap({
         {showVolunteers && (
           <span className="flex items-center gap-1">
             <span className="w-3 h-3 rounded-full bg-[#a855f7]" /> Volunteers
+          </span>
+        )}
+        {showHazards && (
+          <span className="flex items-center gap-1">
+            <span className="w-3 h-3 rounded-full bg-[#ef4444]" /> Q-Vision Hazards
           </span>
         )}
       </div>

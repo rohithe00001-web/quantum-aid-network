@@ -217,6 +217,42 @@ export type Database = {
         }
         Relationships: []
       }
+      qvision_analyses: {
+        Row: {
+          classifications: Json
+          created_at: string
+          id: string
+          image_url: string | null
+          location: Json
+          recommendations: Json
+          status: string
+          summary: string
+          user_id: string
+        }
+        Insert: {
+          classifications: Json
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          location: Json
+          recommendations: Json
+          status?: string
+          summary: string
+          user_id: string
+        }
+        Update: {
+          classifications?: Json
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          location?: Json
+          recommendations?: Json
+          status?: string
+          summary?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       resource_requests: {
         Row: {
           created_at: string

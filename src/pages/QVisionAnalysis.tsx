@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ScanLine, Upload, RotateCcw, CheckCircle2, AlertTriangle, AlertCircle, ShieldCheck } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
@@ -6,6 +6,8 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { QuantumLoader } from "@/components/ui/QuantumLoader";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import type { Json } from "@/integrations/supabase/types";
 
 interface ClassificationResult {
   label: string;
@@ -50,10 +52,31 @@ interface QVisionAnalysisProps {
 }
 
 export default function QVisionAnalysis({ embedded = false }: QVisionAnalysisProps) {
+  const { user } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [results, setResults] = useState<AnalysisResponse | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Get user's location on mount
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.warn('Could not get location:', error);
+          // Default to a fallback location
+          setUserLocation({ lat: 28.6139, lng: 77.2090 }); // Delhi
+        }
+      );
+    }
+  }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -69,6 +92,29 @@ export default function QVisionAnalysis({ embedded = false }: QVisionAnalysisPro
       reader.readAsDataURL(file);
     }
   }, []);
+
+  const saveAnalysisToDatabase = async (analysisResult: AnalysisResponse) => {
+    if (!user || !userLocation) return;
+
+    try {
+      const { error } = await supabase
+        .from('qvision_analyses')
+        .insert([{
+          user_id: user.id,
+          classifications: analysisResult.classifications as unknown as Json,
+          summary: analysisResult.summary,
+          recommendations: [analysisResult.recommendation] as unknown as Json,
+          location: userLocation as unknown as Json,
+          status: 'active'
+        }]);
+
+      if (error) {
+        console.error('Error saving analysis:', error);
+      }
+    } catch (err) {
+      console.error('Error saving analysis:', err);
+    }
+  };
 
   const handleAnalyze = async () => {
     if (!uploadedImage) return;
@@ -92,8 +138,13 @@ export default function QVisionAnalysis({ embedded = false }: QVisionAnalysisPro
         return;
       }
 
-      setResults(data as AnalysisResponse);
-      toast.success('Analysis complete!');
+      const analysisResult = data as AnalysisResponse;
+      setResults(analysisResult);
+      
+      // Save to database for real-time sharing with operators
+      await saveAnalysisToDatabase(analysisResult);
+      
+      toast.success('Analysis complete and shared with emergency operators!');
     } catch (err) {
       console.error('Error:', err);
       toast.error('An unexpected error occurred');

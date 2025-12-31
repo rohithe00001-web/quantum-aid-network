@@ -11,7 +11,6 @@ import { OperationsMap } from '@/components/map/OperationsMap';
 import { FleetManager } from '@/components/fleet/FleetManager';
 import { ShelterManager } from '@/components/shelter/ShelterManager';
 import { VehicleDispatch } from '@/components/dispatch/VehicleDispatch';
-import { QVisionFeed } from '@/components/qvision/QVisionFeed';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -662,14 +661,11 @@ export default function OperatorDashboard() {
         {/* Vehicle Dispatch */}
         <VehicleDispatch />
 
-        {/* Q-Vision Feed & Fleet Management */}
+        {/* Fleet & Shelter Management */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <QVisionFeed />
           <FleetManager />
+          <ShelterManager />
         </div>
-
-        {/* Shelter Management */}
-        <ShelterManager />
 
       </div>
     </Layout>

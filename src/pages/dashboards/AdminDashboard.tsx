@@ -10,12 +10,10 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { UserRoleManager } from '@/components/admin/UserRoleManager';
 import { SharedOperationsMap } from '@/components/map/SharedOperationsMap';
 import { VehicleDispatch } from '@/components/dispatch/VehicleDispatch';
 import { FleetManager } from '@/components/fleet/FleetManager';
 import { ShelterManager } from '@/components/shelter/ShelterManager';
-import { QVisionFeed } from '@/components/qvision/QVisionFeed';
 import { 
   Cpu, IndianRupee, Shield, Settings, 
   Activity, RefreshCw, Save, RotateCcw,
@@ -328,17 +326,11 @@ export default function AdminDashboard() {
         {/* Vehicle Dispatch */}
         <VehicleDispatch />
 
-        {/* Q-Vision Feed & Fleet Management */}
+        {/* Fleet & Shelter Management */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <QVisionFeed />
           <FleetManager compact />
+          <ShelterManager />
         </div>
-
-        {/* Shelter Management */}
-        <ShelterManager />
-
-        {/* User Role Management */}
-        <UserRoleManager />
       </div>
     </Layout>
   );

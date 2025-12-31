@@ -1,9 +1,27 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Package, Building, ArrowRight, Play, RotateCcw, Scale } from "lucide-react";
+import { Package, Building, ArrowRight, RotateCcw, Scale, Plus } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { QuantumLoader } from "@/components/ui/QuantumLoader";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
 
 interface Resource {
   id: string;
@@ -37,6 +55,14 @@ const mockShelters: Shelter[] = [
 export default function ResourceAllocation() {
   const [isAllocating, setIsAllocating] = useState(false);
   const [allocationResult, setAllocationResult] = useState<any>(null);
+  const [resources, setResources] = useState<Resource[]>(mockResources);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newResource, setNewResource] = useState<Omit<Resource, "id">>({
+    name: "",
+    quantity: 0,
+    unit: "",
+    category: "food",
+  });
 
   const handleAllocate = () => {
     setIsAllocating(true);
@@ -55,6 +81,23 @@ export default function ResourceAllocation() {
         waste: 3,
       });
     }, 2500);
+  };
+
+  const handleAddResource = () => {
+    if (!newResource.name || !newResource.unit || newResource.quantity <= 0) {
+      toast.error("Please fill in all fields with valid values");
+      return;
+    }
+
+    const resource: Resource = {
+      id: `r${Date.now()}`,
+      ...newResource,
+    };
+
+    setResources((prev) => [...prev, resource]);
+    setNewResource({ name: "", quantity: 0, unit: "", category: "food" });
+    setIsAddDialogOpen(false);
+    toast.success(`${resource.name} added to stock`);
   };
 
   const categoryColors = {
@@ -102,12 +145,90 @@ export default function ResourceAllocation() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Available Resources */}
           <GlassCard className="p-0">
-            <div className="p-4 border-b border-border flex items-center gap-2">
-              <Package className="w-5 h-5 text-primary" />
-              <h2 className="font-semibold text-foreground">Available Stock</h2>
+            <div className="p-4 border-b border-border flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Package className="w-5 h-5 text-primary" />
+                <h2 className="font-semibold text-foreground">Available Stock</h2>
+              </div>
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline" className="gap-1">
+                    <Plus className="w-4 h-4" />
+                    Add
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New Resource</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Resource Name</Label>
+                      <Input
+                        id="name"
+                        placeholder="e.g. Blankets"
+                        value={newResource.name}
+                        onChange={(e) =>
+                          setNewResource((prev) => ({ ...prev, name: e.target.value }))
+                        }
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="quantity">Quantity</Label>
+                        <Input
+                          id="quantity"
+                          type="number"
+                          placeholder="0"
+                          value={newResource.quantity || ""}
+                          onChange={(e) =>
+                            setNewResource((prev) => ({
+                              ...prev,
+                              quantity: parseInt(e.target.value) || 0,
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="unit">Unit</Label>
+                        <Input
+                          id="unit"
+                          placeholder="e.g. units, liters"
+                          value={newResource.unit}
+                          onChange={(e) =>
+                            setNewResource((prev) => ({ ...prev, unit: e.target.value }))
+                          }
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="category">Category</Label>
+                      <Select
+                        value={newResource.category}
+                        onValueChange={(value: Resource["category"]) =>
+                          setNewResource((prev) => ({ ...prev, category: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="medical">Medical</SelectItem>
+                          <SelectItem value="food">Food</SelectItem>
+                          <SelectItem value="water">Water</SelectItem>
+                          <SelectItem value="equipment">Equipment</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button onClick={handleAddResource} className="w-full">
+                      Add Resource
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
-            <div className="p-4 space-y-3">
-              {mockResources.map((resource, i) => (
+            <div className="p-4 space-y-3 max-h-[500px] overflow-y-auto">
+              {resources.map((resource, i) => (
                 <motion.div
                   key={resource.id}
                   initial={{ opacity: 0, x: -20 }}

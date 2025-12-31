@@ -10,10 +10,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { QuantumLoader } from '@/components/ui/QuantumLoader';
 import { ShelterLocator } from '@/components/shelter/ShelterLocator';
+import QVisionAnalysis from '@/pages/QVisionAnalysis';
 import { 
   AlertCircle, Clock, MapPin, Droplets, 
   Pill, Baby, Package, CheckCircle,
-  XCircle, RefreshCw, Phone, History
+  XCircle, RefreshCw, Phone, History, ScanLine
 } from 'lucide-react';
 
 interface ResourceNeeds {
@@ -651,6 +652,18 @@ export default function UserDashboard() {
 
         {/* Shelter Locator */}
         <ShelterLocator userSOSLocation={sosLocation} />
+
+        {/* Q-Vision Analysis */}
+        <GlassCard className="p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <ScanLine className="w-5 h-5 text-quantum-cyan" />
+            Q-Vision Hazard Analysis
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Upload aerial or satellite imagery to analyze hazards in your area
+          </p>
+          <QVisionAnalysis embedded />
+        </GlassCard>
       </div>
     </Layout>
   );

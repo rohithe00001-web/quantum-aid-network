@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { OperationsMap } from './OperationsMap';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/button';
-import { Map, RefreshCw, Save } from 'lucide-react';
+import { Map, RefreshCw, Save, Edit2, X, Eye, EyeOff } from 'lucide-react';
 import { useMapSettings } from '@/hooks/useMapSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -47,6 +47,8 @@ export function SharedOperationsMap({
   const [markers, setMarkers] = useState<MapMarker[]>([]);
   const [loading, setLoading] = useState(false);
   const [pendingBounds, setPendingBounds] = useState<MapBounds | null>(null);
+  const [isEditingBounds, setIsEditingBounds] = useState(false);
+  const [showBoundary, setShowBoundary] = useState(true);
   const { settings, loading: settingsLoading, updateSettings } = useMapSettings();
   const { role } = useAuth();
 
@@ -174,6 +176,16 @@ export function SharedOperationsMap({
     setPendingBounds(bounds);
   }, []);
 
+  const handleStartEditing = () => {
+    setIsEditingBounds(true);
+    toast.info('Pan and zoom the map to select the operational area, then click Save');
+  };
+
+  const handleCancelEditing = () => {
+    setIsEditingBounds(false);
+    setPendingBounds(null);
+  };
+
   const handleSaveBounds = async () => {
     if (!pendingBounds) return;
     
@@ -185,10 +197,11 @@ export function SharedOperationsMap({
     });
     
     if (success) {
-      toast.success('Operational area saved');
+      toast.success('Geofence boundary saved');
       setPendingBounds(null);
+      setIsEditingBounds(false);
     } else {
-      toast.error('Failed to save area');
+      toast.error('Failed to save boundary');
     }
   };
 
@@ -221,31 +234,75 @@ export function SharedOperationsMap({
           {title}
         </h3>
         <div className="flex items-center gap-2">
-          {canSelectArea && pendingBounds && (
-            <Button size="sm" variant="default" onClick={handleSaveBounds}>
-              <Save className="w-4 h-4 mr-1" />
-              Save Area
+          {/* Toggle boundary visibility */}
+          {mapBounds && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowBoundary(!showBoundary)}
+              title={showBoundary ? 'Hide boundary' : 'Show boundary'}
+            >
+              {showBoundary ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
             </Button>
           )}
+          
+          {/* Admin boundary editing controls */}
+          {canSelectArea && !isEditingBounds && (
+            <Button size="sm" variant="outline" onClick={handleStartEditing}>
+              <Edit2 className="w-4 h-4 mr-1" />
+              Edit Boundary
+            </Button>
+          )}
+          
+          {canSelectArea && isEditingBounds && (
+            <>
+              <Button size="sm" variant="ghost" onClick={handleCancelEditing}>
+                <X className="w-4 h-4 mr-1" />
+                Cancel
+              </Button>
+              <Button 
+                size="sm" 
+                variant="default" 
+                onClick={handleSaveBounds}
+                disabled={!pendingBounds}
+              >
+                <Save className="w-4 h-4 mr-1" />
+                Save Boundary
+              </Button>
+            </>
+          )}
+          
           <Button size="sm" variant="ghost" onClick={fetchMapData} disabled={loading}>
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
       </div>
 
-      <div className={`${height} rounded-lg overflow-hidden border border-border/30`}>
+      {/* Editing mode indicator */}
+      {isEditingBounds && (
+        <div className="mb-3 p-2 bg-quantum-cyan/10 border border-quantum-cyan/30 rounded-lg text-sm text-quantum-cyan">
+          📍 Pan and zoom the map to select the geofence boundary. The visible area will become the new operational zone.
+        </div>
+      )}
+
+      <div className={`${height} rounded-lg overflow-hidden border border-border/30 ${isEditingBounds ? 'ring-2 ring-quantum-cyan' : ''}`}>
         <OperationsMap 
           markers={markers}
           center={{ lat: settings.center_lat, lng: settings.center_lng }}
           zoom={settings.zoom_level}
           bounds={mapBounds}
-          onBoundsChange={canSelectArea ? handleBoundsChange : undefined}
-          isAdmin={canSelectArea}
-          showGeofenceBoundary={!!mapBounds}
+          onBoundsChange={isEditingBounds ? handleBoundsChange : undefined}
+          isAdmin={isEditingBounds}
+          showGeofenceBoundary={showBoundary && !!mapBounds && !isEditingBounds}
         />
       </div>
 
       <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground flex-wrap">
+        {showBoundary && mapBounds && (
+          <span className="flex items-center gap-1">
+            <span className="w-3 h-3 rounded border-2 border-dashed border-[#00d9ff]" /> Geofence
+          </span>
+        )}
         {showSOS && (
           <span className="flex items-center gap-1">
             <span className="w-3 h-3 rounded-full bg-[#f59e0b]" /> SOS Alerts

@@ -241,6 +241,7 @@ export function SharedOperationsMap({
           bounds={mapBounds}
           onBoundsChange={canSelectArea ? handleBoundsChange : undefined}
           isAdmin={canSelectArea}
+          showGeofenceBoundary={!!mapBounds}
         />
       </div>
 

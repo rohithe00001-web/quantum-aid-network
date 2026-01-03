@@ -11,6 +11,7 @@ import { OperationsMap } from '@/components/map/OperationsMap';
 import { FleetManager } from '@/components/fleet/FleetManager';
 import { ShelterManager } from '@/components/shelter/ShelterManager';
 import { VehicleDispatch } from '@/components/dispatch/VehicleDispatch';
+import { GeofenceAlerts } from '@/components/geofencing/GeofenceAlerts';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -462,6 +463,9 @@ export default function OperatorDashboard() {
             </span>
           </div>
         </GlassCard>
+
+        {/* Geofence Alerts */}
+        <GeofenceAlerts />
 
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

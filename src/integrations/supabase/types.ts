@@ -100,6 +100,48 @@ export type Database = {
           },
         ]
       }
+      geofence_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alert_type: string
+          created_at: string
+          entity_id: string
+          entity_label: string
+          entity_type: string
+          id: string
+          latitude: number
+          longitude: number
+          status: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type?: string
+          created_at?: string
+          entity_id: string
+          entity_label: string
+          entity_type: string
+          id?: string
+          latitude: number
+          longitude: number
+          status?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type?: string
+          created_at?: string
+          entity_id?: string
+          entity_label?: string
+          entity_type?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          status?: string
+        }
+        Relationships: []
+      }
       map_settings: {
         Row: {
           bounds_ne_lat: number | null

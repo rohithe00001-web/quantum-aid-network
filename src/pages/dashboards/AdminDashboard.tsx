@@ -14,6 +14,7 @@ import { SharedOperationsMap } from '@/components/map/SharedOperationsMap';
 import { VehicleDispatch } from '@/components/dispatch/VehicleDispatch';
 import { FleetManager } from '@/components/fleet/FleetManager';
 import { ShelterManager } from '@/components/shelter/ShelterManager';
+import { GeofenceAlerts } from '@/components/geofencing/GeofenceAlerts';
 import { 
   Cpu, IndianRupee, Shield, Settings, 
   Activity, RefreshCw, Save, RotateCcw,
@@ -324,6 +325,9 @@ export default function AdminDashboard() {
           showHazards={true}
           allowAreaSelection={true}
         />
+
+        {/* Geofence Alerts */}
+        <GeofenceAlerts />
 
         {/* Vehicle Dispatch */}
         <VehicleDispatch />

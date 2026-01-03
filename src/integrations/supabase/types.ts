@@ -100,6 +100,51 @@ export type Database = {
           },
         ]
       }
+      map_settings: {
+        Row: {
+          bounds_ne_lat: number | null
+          bounds_ne_lng: number | null
+          bounds_sw_lat: number | null
+          bounds_sw_lng: number | null
+          center_lat: number
+          center_lng: number
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          updated_at: string
+          zoom_level: number
+        }
+        Insert: {
+          bounds_ne_lat?: number | null
+          bounds_ne_lng?: number | null
+          bounds_sw_lat?: number | null
+          bounds_sw_lng?: number | null
+          center_lat?: number
+          center_lng?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          zoom_level?: number
+        }
+        Update: {
+          bounds_ne_lat?: number | null
+          bounds_ne_lng?: number | null
+          bounds_sw_lat?: number | null
+          bounds_sw_lng?: number | null
+          center_lat?: number
+          center_lng?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          zoom_level?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

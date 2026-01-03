@@ -313,7 +313,7 @@ export default function AdminDashboard() {
           </GlassCard>
         </div>
 
-        {/* Operations Map */}
+        {/* Operations Map with Area Selection */}
         <SharedOperationsMap 
           title="System-wide Operations Map"
           height="h-96"
@@ -321,6 +321,8 @@ export default function AdminDashboard() {
           showShelters={true}
           showSOS={true}
           showVolunteers={true}
+          showHazards={true}
+          allowAreaSelection={true}
         />
 
         {/* Vehicle Dispatch */}

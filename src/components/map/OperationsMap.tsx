@@ -22,6 +22,7 @@ interface OperationsMapProps {
   bounds?: MapBounds | null;
   onBoundsChange?: (bounds: MapBounds) => void;
   isAdmin?: boolean;
+  showGeofenceBoundary?: boolean;
 }
 
 export function OperationsMap({ 
@@ -31,10 +32,12 @@ export function OperationsMap({
   bounds,
   onBoundsChange,
   isAdmin = false,
+  showGeofenceBoundary = false,
 }: OperationsMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerLayerRef = useRef<L.FeatureGroup | null>(null);
+  const boundaryLayerRef = useRef<L.Rectangle | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
   const colors = useMemo<Record<string, { fill: string; label: string }>>(
@@ -119,6 +122,7 @@ export function OperationsMap({
     return () => {
       setMapReady(false);
       markerLayerRef.current = null;
+      boundaryLayerRef.current = null;
       mapRef.current?.remove();
       mapRef.current = null;
     };
@@ -133,6 +137,40 @@ export function OperationsMap({
       mapRef.current?.off('moveend', handleMoveEnd);
     };
   }, [isAdmin, handleMoveEnd]);
+
+  // Geofence boundary visualization
+  useEffect(() => {
+    if (!mapRef.current || !mapReady) return;
+
+    // Remove existing boundary
+    if (boundaryLayerRef.current) {
+      boundaryLayerRef.current.remove();
+      boundaryLayerRef.current = null;
+    }
+
+    // Show boundary if we have bounds and showGeofenceBoundary is enabled
+    if (showGeofenceBoundary && bounds) {
+      const rectangleBounds = L.latLngBounds(
+        L.latLng(bounds.sw_lat, bounds.sw_lng),
+        L.latLng(bounds.ne_lat, bounds.ne_lng)
+      );
+
+      const boundary = L.rectangle(rectangleBounds, {
+        color: '#00d9ff',
+        weight: 3,
+        opacity: 0.8,
+        fillColor: '#00d9ff',
+        fillOpacity: 0.1,
+        dashArray: '10, 5',
+        interactive: false,
+      });
+
+      boundary.addTo(mapRef.current);
+      boundaryLayerRef.current = boundary;
+
+      console.log('[OperationsMap] Geofence boundary displayed');
+    }
+  }, [bounds, showGeofenceBoundary, mapReady]);
 
   // Efficient marker rendering with batching
   useEffect(() => {

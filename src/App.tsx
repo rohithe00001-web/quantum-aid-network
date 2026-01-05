@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { GoogleMapsProvider } from "@/components/map/GoogleMapsProvider";
 import Dashboard from "./pages/Dashboard";
 import FleetRouting from "./pages/FleetRouting";
 import ResourceAllocation from "./pages/ResourceAllocation";
@@ -161,7 +162,9 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <AppRoutes />
+          <GoogleMapsProvider>
+            <AppRoutes />
+          </GoogleMapsProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

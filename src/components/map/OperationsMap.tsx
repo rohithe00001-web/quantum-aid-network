@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, Rectangle, InfoWindow } from '@react-google-maps/api';
+import { GoogleMap, LoadScript, Marker, Rectangle, InfoWindow } from '@react-google-maps/api';
 
 interface MapBounds {
   sw_lat: number;
@@ -68,48 +68,22 @@ const markerLabels: Record<string, string> = {
   hazard: 'Q-Vision Hazards',
 };
 
-export function OperationsMap({ 
-  markers = [], 
-  center = { lat: 12.9716, lng: 77.5946 },
-  zoom = 12,
-  bounds,
-  onBoundsChange,
-  isAdmin = false,
-  showGeofenceBoundary = false,
+// Inner map component that renders after LoadScript is ready
+function MapContent({ 
+  markers, 
+  center, 
+  zoom, 
+  bounds, 
+  onBoundsChange, 
+  isAdmin, 
+  showGeofenceBoundary 
 }: OperationsMapProps) {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [selectedMarker, setSelectedMarker] = useState<MarkerData | null>(null);
-  const [apiKey, setApiKey] = useState<string>('');
-
-  // Fetch API key from edge function
-  useEffect(() => {
-    const fetchApiKey = async () => {
-      try {
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-google-maps-key`, {
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-        });
-        const data = await response.json();
-        if (data.apiKey) {
-          setApiKey(data.apiKey);
-        }
-      } catch (error) {
-        console.error('Failed to fetch Google Maps API key:', error);
-      }
-    };
-    fetchApiKey();
-  }, []);
-
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: apiKey,
-  });
 
   const onLoad = useCallback((mapInstance: google.maps.Map) => {
     setMap(mapInstance);
     
-    // If bounds are provided, fit to them
     if (bounds) {
       const googleBounds = new google.maps.LatLngBounds(
         { lat: bounds.sw_lat, lng: bounds.sw_lng },
@@ -123,7 +97,6 @@ export function OperationsMap({
     setMap(null);
   }, []);
 
-  // Handle bounds change for admin area selection
   const handleIdle = useCallback(() => {
     if (!map || !isAdmin || !onBoundsChange) return;
     
@@ -140,8 +113,7 @@ export function OperationsMap({
     }
   }, [map, isAdmin, onBoundsChange]);
 
-  // Create SVG marker icon
-  const createMarkerIcon = useCallback((type: string) => {
+  const createMarkerIcon = useCallback((type: string): google.maps.Symbol => {
     const color = markerColors[type] || '#ffffff';
     return {
       path: google.maps.SymbolPath.CIRCLE,
@@ -181,38 +153,8 @@ export function OperationsMap({
     } : undefined,
   }), [isAdmin, bounds]);
 
-  if (!apiKey) {
-    return (
-      <div className="relative w-full h-full min-h-[300px]">
-        <div className="absolute inset-0 flex items-center justify-center bg-secondary/50 rounded-lg">
-          <div className="text-muted-foreground text-sm">Loading map configuration...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <div className="relative w-full h-full min-h-[300px]">
-        <div className="absolute inset-0 flex items-center justify-center bg-destructive/10 rounded-lg">
-          <div className="text-destructive text-sm">Failed to load Google Maps</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isLoaded) {
-    return (
-      <div className="relative w-full h-full min-h-[300px]">
-        <div className="absolute inset-0 flex items-center justify-center bg-secondary/50 rounded-lg">
-          <div className="text-muted-foreground text-sm">Loading map…</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="relative w-full h-full min-h-[300px]">
+    <>
       <GoogleMap
         mapContainerStyle={containerStyle}
         center={center}
@@ -222,7 +164,6 @@ export function OperationsMap({
         onIdle={handleIdle}
         options={mapOptions}
       >
-        {/* Geofence boundary */}
         {showGeofenceBoundary && rectangleBounds && (
           <Rectangle
             bounds={rectangleBounds}
@@ -237,8 +178,7 @@ export function OperationsMap({
           />
         )}
 
-        {/* Markers */}
-        {markers.map((marker) => (
+        {markers?.map((marker) => (
           <Marker
             key={marker.id}
             position={{ lat: marker.lat, lng: marker.lng }}
@@ -247,7 +187,6 @@ export function OperationsMap({
           />
         ))}
 
-        {/* Info Window */}
         {selectedMarker && (
           <InfoWindow
             position={{ lat: selectedMarker.lat, lng: selectedMarker.lng }}
@@ -268,15 +207,13 @@ export function OperationsMap({
         )}
       </GoogleMap>
 
-      {/* Admin indicator */}
       {isAdmin && (
         <div className="absolute top-3 left-3 bg-primary/90 text-primary-foreground text-xs px-2 py-1 rounded z-10">
           Pan/zoom to set operational area
         </div>
       )}
 
-      {/* Map Legend */}
-      {markers.length > 0 && (
+      {markers && markers.length > 0 && (
         <div className="absolute bottom-3 right-3 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-border/50 z-10">
           <p className="text-xs font-semibold text-foreground mb-2">Legend</p>
           <div className="space-y-1.5">
@@ -295,6 +232,61 @@ export function OperationsMap({
           </p>
         </div>
       )}
+    </>
+  );
+}
+
+export function OperationsMap(props: OperationsMapProps) {
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchApiKey = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-google-maps-key`, {
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+        });
+        const data = await response.json();
+        if (data.apiKey) {
+          setApiKey(data.apiKey);
+        } else {
+          setError(data.error || 'Failed to load API key');
+        }
+      } catch (err) {
+        console.error('Failed to fetch Google Maps API key:', err);
+        setError('Failed to load map configuration');
+      }
+    };
+    fetchApiKey();
+  }, []);
+
+  if (error) {
+    return (
+      <div className="relative w-full h-full min-h-[300px]">
+        <div className="absolute inset-0 flex items-center justify-center bg-destructive/10 rounded-lg">
+          <div className="text-destructive text-sm">{error}</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!apiKey) {
+    return (
+      <div className="relative w-full h-full min-h-[300px]">
+        <div className="absolute inset-0 flex items-center justify-center bg-secondary/50 rounded-lg">
+          <div className="text-muted-foreground text-sm">Loading map...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full h-full min-h-[300px]">
+      <LoadScript googleMapsApiKey={apiKey}>
+        <MapContent {...props} />
+      </LoadScript>
     </div>
   );
 }

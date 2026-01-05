@@ -242,18 +242,38 @@ export function OperationsMap({
         <div className="absolute bottom-3 right-3 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-border/50 z-10">
           <p className="text-xs font-semibold text-foreground mb-2">Legend</p>
           <div className="space-y-1.5">
-            {Object.entries(markerColors).map(([key, color]) => (
-              <div key={key} className="flex items-center gap-2">
-                <span
-                  className="w-3 h-3 rounded-full border-2 border-white"
-                  style={{ backgroundColor: color }}
-                />
-                <span className="text-xs text-muted-foreground">{markerLabels[key]}</span>
-              </div>
-            ))}
+            {Object.entries(markerColors).map(([key, color]) => {
+              const markersOfType = markers.filter(m => m.type === key);
+              const firstMarker = markersOfType[0];
+              
+              const handleClick = () => {
+                if (firstMarker) {
+                  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${firstMarker.lat},${firstMarker.lng}`;
+                  window.open(googleMapsUrl, '_blank');
+                }
+              };
+              
+              return (
+                <div 
+                  key={key} 
+                  className={`flex items-center gap-2 ${firstMarker ? 'cursor-pointer hover:bg-accent/50 -mx-1 px-1 rounded transition-colors' : ''}`}
+                  onClick={firstMarker ? handleClick : undefined}
+                  title={firstMarker ? `Open in Google Maps (${markersOfType.length} ${markerLabels[key].toLowerCase()})` : undefined}
+                >
+                  <span
+                    className="w-3 h-3 rounded-full border-2 border-white"
+                    style={{ backgroundColor: color }}
+                  />
+                  <span className="text-xs text-muted-foreground">{markerLabels[key]}</span>
+                  {firstMarker && (
+                    <span className="text-[10px] text-primary ml-auto">↗</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
           <p className="text-[10px] text-muted-foreground mt-2 pt-1 border-t border-border/50">
-            {markers.length} markers
+            {markers.length} markers • Click to open in Maps
           </p>
         </div>
       )}

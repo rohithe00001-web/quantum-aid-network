@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { GoogleMap, Marker, Rectangle, InfoWindow } from '@react-google-maps/api';
 import { useGoogleMaps } from './GoogleMapsProvider';
+import { toast } from 'sonner';
 
 interface MapBounds {
   sw_lat: number;
@@ -227,10 +228,16 @@ export function OperationsMap({
               }}>
                 {selectedMarker.type}
               </div>
-              <a
-                href={`https://www.google.com/maps/search/?api=1&query=${selectedMarker.lat},${selectedMarker.lng}`}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={() => {
+                  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${selectedMarker.lat},${selectedMarker.lng}`;
+                  navigator.clipboard.writeText(googleMapsUrl).then(() => {
+                    toast.success('Google Maps link copied to clipboard!');
+                  }).catch(() => {
+                    // Fallback: try to open in new window
+                    window.open(googleMapsUrl, '_blank', 'noopener,noreferrer');
+                  });
+                }}
                 style={{
                   marginTop: '8px',
                   padding: '6px 12px',
@@ -246,11 +253,10 @@ export function OperationsMap({
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '4px',
-                  textDecoration: 'none',
                 }}
               >
-                Open in Google Maps ↗
-              </a>
+                📋 Copy Google Maps Link
+              </button>
             </div>
           </InfoWindow>
         )}
@@ -270,6 +276,15 @@ export function OperationsMap({
               const markersOfType = markers.filter(m => m.type === key);
               const firstMarker = markersOfType[0];
               
+              const handleCopyLink = () => {
+                if (firstMarker) {
+                  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${firstMarker.lat},${firstMarker.lng}`;
+                  navigator.clipboard.writeText(googleMapsUrl).then(() => {
+                    toast.success(`${markerLabels[key]} location copied!`);
+                  });
+                }
+              };
+              
               const content = (
                 <>
                   <span
@@ -278,22 +293,20 @@ export function OperationsMap({
                   />
                   <span className="text-xs text-muted-foreground">{markerLabels[key]}</span>
                   {firstMarker && (
-                    <span className="text-[10px] text-primary ml-auto">↗</span>
+                    <span className="text-[10px] text-primary ml-auto">📋</span>
                   )}
                 </>
               );
               
               return firstMarker ? (
-                <a
+                <div
                   key={key}
-                  href={`https://www.google.com/maps/search/?api=1&query=${firstMarker.lat},${firstMarker.lng}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 cursor-pointer hover:bg-accent/50 -mx-1 px-1 rounded transition-colors no-underline"
-                  title={`Open in Google Maps (${markersOfType.length} ${markerLabels[key].toLowerCase()})`}
+                  onClick={handleCopyLink}
+                  className="flex items-center gap-2 cursor-pointer hover:bg-accent/50 -mx-1 px-1 rounded transition-colors"
+                  title={`Copy Google Maps link (${markersOfType.length} ${markerLabels[key].toLowerCase()})`}
                 >
                   {content}
-                </a>
+                </div>
               ) : (
                 <div key={key} className="flex items-center gap-2">
                   {content}
@@ -302,7 +315,7 @@ export function OperationsMap({
             })}
           </div>
           <p className="text-[10px] text-muted-foreground mt-2 pt-1 border-t border-border/50">
-            {markers.length} markers • Click to open in Maps
+            {markers.length} markers • Click to copy link
           </p>
         </div>
       )}

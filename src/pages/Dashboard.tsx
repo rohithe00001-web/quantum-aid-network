@@ -14,6 +14,7 @@ import { MetricCard } from "@/components/ui/MetricCard";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { StatusIndicator } from "@/components/ui/StatusIndicator";
 import { OperationsMap } from "@/components/map/OperationsMap";
+import { LocationTracker } from "@/components/map/LocationTracker";
 
 const recentOperations = [
   {
@@ -165,7 +166,10 @@ export default function Dashboard() {
                   Live fleet and resource positioning
                 </p>
               </div>
-              <StatusIndicator status="online" label="Live" />
+              <div className="flex items-center gap-3">
+                <LocationTracker />
+                <StatusIndicator status="online" label="Live" />
+              </div>
             </div>
 
             <div className="relative h-80">

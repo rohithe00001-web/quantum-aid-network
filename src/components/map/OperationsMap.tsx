@@ -145,7 +145,7 @@ export function OperationsMap({
     fullscreenControl: true,
     scrollwheel: true, // Enable mouse scroll zoom
     gestureHandling: 'greedy', // Allow all gestures without ctrl key
-    minZoom: 3, // Allow zooming out further
+    minZoom: 1, // Maximum zoom out (world view)
     maxZoom: 21, // Maximum zoom (Google Maps limit)
     restriction: !isAdmin && bounds ? {
       latLngBounds: {

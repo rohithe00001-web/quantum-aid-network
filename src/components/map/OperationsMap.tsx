@@ -1,7 +1,8 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { GoogleMap, Marker, Rectangle, InfoWindow } from '@react-google-maps/api';
 import { useGoogleMaps } from './GoogleMapsProvider';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MapBounds {
   sw_lat: number;
@@ -14,8 +15,15 @@ interface MarkerData {
   id: string;
   lng: number;
   lat: number;
-  type: 'vehicle' | 'shelter' | 'alert' | 'resource' | 'hazard';
+  type: 'vehicle' | 'shelter' | 'alert' | 'resource' | 'hazard' | 'volunteer';
   label: string;
+}
+
+interface VolunteerLocation {
+  id: string;
+  volunteer_id: string;
+  current_location: { lat: number; lng: number } | null;
+  status: string;
 }
 
 interface OperationsMapProps {
@@ -26,6 +34,7 @@ interface OperationsMapProps {
   onBoundsChange?: (bounds: MapBounds) => void;
   isAdmin?: boolean;
   showGeofenceBoundary?: boolean;
+  showVolunteers?: boolean;
 }
 
 const containerStyle = {
@@ -60,6 +69,7 @@ const markerColors: Record<string, string> = {
   alert: '#f59e0b',
   resource: '#a855f7',
   hazard: '#ef4444',
+  volunteer: '#ec4899',
 };
 
 const markerLabels: Record<string, string> = {
@@ -68,6 +78,7 @@ const markerLabels: Record<string, string> = {
   alert: 'Alerts',
   resource: 'Resources',
   hazard: 'Q-Vision Hazards',
+  volunteer: 'Volunteers',
 };
 
 export function OperationsMap({ 
@@ -78,10 +89,87 @@ export function OperationsMap({
   onBoundsChange,
   isAdmin = false,
   showGeofenceBoundary = false,
+  showVolunteers = true,
 }: OperationsMapProps) {
   const { isLoaded, loadError } = useGoogleMaps();
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [selectedMarker, setSelectedMarker] = useState<MarkerData | null>(null);
+  const [volunteerLocations, setVolunteerLocations] = useState<VolunteerLocation[]>([]);
+
+  // Fetch volunteer locations and subscribe to real-time updates
+  useEffect(() => {
+    if (!showVolunteers) return;
+
+    const fetchVolunteers = async () => {
+      const { data, error } = await supabase
+        .from('volunteer_assignments')
+        .select('id, volunteer_id, current_location, status')
+        .not('current_location', 'is', null)
+        .in('status', ['active', 'en_route', 'assigned']);
+      
+      if (!error && data) {
+        setVolunteerLocations(data as VolunteerLocation[]);
+      }
+    };
+
+    fetchVolunteers();
+
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel('volunteer-locations')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'volunteer_assignments',
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            const newData = payload.new as VolunteerLocation;
+            if (newData.current_location && ['active', 'en_route', 'assigned'].includes(newData.status)) {
+              setVolunteerLocations(prev => {
+                const existing = prev.findIndex(v => v.id === newData.id);
+                if (existing >= 0) {
+                  const updated = [...prev];
+                  updated[existing] = newData;
+                  return updated;
+                }
+                return [...prev, newData];
+              });
+            } else {
+              setVolunteerLocations(prev => prev.filter(v => v.id !== newData.id));
+            }
+          } else if (payload.eventType === 'DELETE') {
+            const oldData = payload.old as { id: string };
+            setVolunteerLocations(prev => prev.filter(v => v.id !== oldData.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [showVolunteers]);
+
+  // Convert volunteer locations to markers
+  const volunteerMarkers: MarkerData[] = useMemo(() => {
+    return volunteerLocations
+      .filter(v => v.current_location?.lat && v.current_location?.lng)
+      .map(v => ({
+        id: `volunteer-${v.id}`,
+        lat: v.current_location!.lat,
+        lng: v.current_location!.lng,
+        type: 'volunteer' as const,
+        label: `Volunteer (${v.status})`,
+      }));
+  }, [volunteerLocations]);
+
+  // Combine all markers
+  const allMarkers = useMemo(() => {
+    return [...markers, ...volunteerMarkers];
+  }, [markers, volunteerMarkers]);
 
   const onLoad = useCallback((mapInstance: google.maps.Map) => {
     setMap(mapInstance);
@@ -204,7 +292,7 @@ export function OperationsMap({
           />
         )}
 
-        {markers.map((marker) => (
+        {allMarkers.map((marker) => (
           <Marker
             key={marker.id}
             position={{ lat: marker.lat, lng: marker.lng }}
@@ -268,12 +356,12 @@ export function OperationsMap({
         </div>
       )}
 
-      {markers.length > 0 && (
+      {allMarkers.length > 0 && (
         <div className="absolute bottom-3 right-3 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-border/50 z-10">
           <p className="text-xs font-semibold text-foreground mb-2">Legend</p>
           <div className="space-y-1.5">
             {Object.entries(markerColors).map(([key, color]) => {
-              const markersOfType = markers.filter(m => m.type === key);
+              const markersOfType = allMarkers.filter(m => m.type === key);
               const firstMarker = markersOfType[0];
               
               const handleCopyLink = () => {
@@ -315,7 +403,7 @@ export function OperationsMap({
             })}
           </div>
           <p className="text-[10px] text-muted-foreground mt-2 pt-1 border-t border-border/50">
-            {markers.length} markers • Click to copy link
+            {allMarkers.length} markers • Click to copy link
           </p>
         </div>
       )}

@@ -71,8 +71,8 @@ const markerLabels: Record<string, string> = {
 
 export function OperationsMap({ 
   markers = [], 
-  center = { lat: 12.9716, lng: 77.5946 },
-  zoom = 12,
+  center = { lat: 20.5937, lng: 78.9629 }, // Center of India
+  zoom = 5, // Zoom level to show all of India
   bounds,
   onBoundsChange,
   isAdmin = false,
@@ -143,6 +143,10 @@ export function OperationsMap({
     mapTypeControl: false,
     streetViewControl: false,
     fullscreenControl: true,
+    scrollwheel: true, // Enable mouse scroll zoom
+    gestureHandling: 'greedy', // Allow all gestures without ctrl key
+    minZoom: 4, // Allow zooming out to see all of India
+    maxZoom: 18,
     restriction: !isAdmin && bounds ? {
       latLngBounds: {
         north: bounds.ne_lat,
@@ -150,7 +154,7 @@ export function OperationsMap({
         east: bounds.ne_lng,
         west: bounds.sw_lng,
       },
-      strictBounds: true,
+      strictBounds: false, // Allow panning slightly outside bounds
     } : undefined,
   }), [isAdmin, bounds]);
 

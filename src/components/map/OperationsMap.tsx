@@ -227,11 +227,10 @@ export function OperationsMap({
               }}>
                 {selectedMarker.type}
               </div>
-              <button
-                onClick={() => {
-                  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${selectedMarker.lat},${selectedMarker.lng}`;
-                  window.open(googleMapsUrl, '_blank');
-                }}
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${selectedMarker.lat},${selectedMarker.lng}`}
+                target="_blank"
+                rel="noopener noreferrer"
                 style={{
                   marginTop: '8px',
                   padding: '6px 12px',
@@ -247,10 +246,11 @@ export function OperationsMap({
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '4px',
+                  textDecoration: 'none',
                 }}
               >
                 Open in Google Maps ↗
-              </button>
+              </a>
             </div>
           </InfoWindow>
         )}
@@ -270,28 +270,33 @@ export function OperationsMap({
               const markersOfType = markers.filter(m => m.type === key);
               const firstMarker = markersOfType[0];
               
-              const handleClick = () => {
-                if (firstMarker) {
-                  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${firstMarker.lat},${firstMarker.lng}`;
-                  window.open(googleMapsUrl, '_blank');
-                }
-              };
-              
-              return (
-                <div 
-                  key={key} 
-                  className={`flex items-center gap-2 ${firstMarker ? 'cursor-pointer hover:bg-accent/50 -mx-1 px-1 rounded transition-colors' : ''}`}
-                  onClick={firstMarker ? handleClick : undefined}
-                  title={firstMarker ? `Open in Google Maps (${markersOfType.length} ${markerLabels[key].toLowerCase()})` : undefined}
-                >
+              const content = (
+                <>
                   <span
-                    className="w-3 h-3 rounded-full border-2 border-white"
+                    className="w-3 h-3 rounded-full border-2 border-white flex-shrink-0"
                     style={{ backgroundColor: color }}
                   />
                   <span className="text-xs text-muted-foreground">{markerLabels[key]}</span>
                   {firstMarker && (
                     <span className="text-[10px] text-primary ml-auto">↗</span>
                   )}
+                </>
+              );
+              
+              return firstMarker ? (
+                <a
+                  key={key}
+                  href={`https://www.google.com/maps/search/?api=1&query=${firstMarker.lat},${firstMarker.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 cursor-pointer hover:bg-accent/50 -mx-1 px-1 rounded transition-colors no-underline"
+                  title={`Open in Google Maps (${markersOfType.length} ${markerLabels[key].toLowerCase()})`}
+                >
+                  {content}
+                </a>
+              ) : (
+                <div key={key} className="flex items-center gap-2">
+                  {content}
                 </div>
               );
             })}

@@ -227,6 +227,30 @@ export function OperationsMap({
               }}>
                 {selectedMarker.type}
               </div>
+              <button
+                onClick={() => {
+                  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${selectedMarker.lat},${selectedMarker.lng}`;
+                  window.open(googleMapsUrl, '_blank');
+                }}
+                style={{
+                  marginTop: '8px',
+                  padding: '6px 12px',
+                  backgroundColor: '#00d9ff',
+                  color: '#0a0f19',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                }}
+              >
+                Open in Google Maps ↗
+              </button>
             </div>
           </InfoWindow>
         )}

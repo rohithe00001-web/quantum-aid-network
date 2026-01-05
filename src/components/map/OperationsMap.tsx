@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import { GoogleMap, useJsApiLoader, Marker, Rectangle, InfoWindow } from '@react-google-maps/api';
 
 interface MapBounds {
   sw_lat: number;
@@ -9,14 +8,16 @@ interface MapBounds {
   ne_lng: number;
 }
 
+interface MarkerData {
+  id: string;
+  lng: number;
+  lat: number;
+  type: 'vehicle' | 'shelter' | 'alert' | 'resource' | 'hazard';
+  label: string;
+}
+
 interface OperationsMapProps {
-  markers?: {
-    id: string;
-    lng: number;
-    lat: number;
-    type: 'vehicle' | 'shelter' | 'alert' | 'resource' | 'hazard';
-    label: string;
-  }[];
+  markers?: MarkerData[];
   center?: { lat: number; lng: number };
   zoom?: number;
   bounds?: MapBounds | null;
@@ -24,6 +25,48 @@ interface OperationsMapProps {
   isAdmin?: boolean;
   showGeofenceBoundary?: boolean;
 }
+
+const containerStyle = {
+  width: '100%',
+  height: '100%',
+};
+
+const darkMapStyles = [
+  { elementType: 'geometry', stylers: [{ color: '#0a0f19' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#0a0f19' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#1a2a1a' }] },
+  { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#6b9a76' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1e2738' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#1e2738' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9ca5b3' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#2a3a52' }] },
+  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#1e2738' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#f3d19c' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#2f3948' }] },
+  { featureType: 'transit.station', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0d1a26' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#515c6d' }] },
+  { featureType: 'water', elementType: 'labels.text.stroke', stylers: [{ color: '#0a0f19' }] },
+];
+
+const markerColors: Record<string, string> = {
+  vehicle: '#00d9ff',
+  shelter: '#22c55e',
+  alert: '#f59e0b',
+  resource: '#a855f7',
+  hazard: '#ef4444',
+};
+
+const markerLabels: Record<string, string> = {
+  vehicle: 'Vehicles',
+  shelter: 'Shelters',
+  alert: 'Alerts',
+  resource: 'Resources',
+  hazard: 'Q-Vision Hazards',
+};
 
 export function OperationsMap({ 
   markers = [], 
@@ -34,213 +77,216 @@ export function OperationsMap({
   isAdmin = false,
   showGeofenceBoundary = false,
 }: OperationsMapProps) {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const markerLayerRef = useRef<L.FeatureGroup | null>(null);
-  const boundaryLayerRef = useRef<L.Rectangle | null>(null);
-  const [mapReady, setMapReady] = useState(false);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [selectedMarker, setSelectedMarker] = useState<MarkerData | null>(null);
+  const [apiKey, setApiKey] = useState<string>('');
 
-  const colors = useMemo<Record<string, { fill: string; label: string }>>(
-    () => ({
-      vehicle: { fill: '#00d9ff', label: 'Vehicles' },
-      shelter: { fill: '#22c55e', label: 'Shelters' },
-      alert: { fill: '#f59e0b', label: 'Alerts' },
-      resource: { fill: '#a855f7', label: 'Resources' },
-      hazard: { fill: '#ef4444', label: 'Q-Vision Hazards' },
-    }),
-    []
-  );
+  // Fetch API key from edge function
+  useEffect(() => {
+    const fetchApiKey = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-google-maps-key`, {
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+        });
+        const data = await response.json();
+        if (data.apiKey) {
+          setApiKey(data.apiKey);
+        }
+      } catch (error) {
+        console.error('Failed to fetch Google Maps API key:', error);
+      }
+    };
+    fetchApiKey();
+  }, []);
+
+  const { isLoaded, loadError } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: apiKey,
+  });
+
+  const onLoad = useCallback((mapInstance: google.maps.Map) => {
+    setMap(mapInstance);
+    
+    // If bounds are provided, fit to them
+    if (bounds) {
+      const googleBounds = new google.maps.LatLngBounds(
+        { lat: bounds.sw_lat, lng: bounds.sw_lng },
+        { lat: bounds.ne_lat, lng: bounds.ne_lng }
+      );
+      mapInstance.fitBounds(googleBounds);
+    }
+  }, [bounds]);
+
+  const onUnmount = useCallback(() => {
+    setMap(null);
+  }, []);
 
   // Handle bounds change for admin area selection
-  const handleMoveEnd = useCallback(() => {
-    if (!mapRef.current || !isAdmin || !onBoundsChange) return;
+  const handleIdle = useCallback(() => {
+    if (!map || !isAdmin || !onBoundsChange) return;
     
-    const mapBounds = mapRef.current.getBounds();
-    onBoundsChange({
-      sw_lat: mapBounds.getSouthWest().lat,
-      sw_lng: mapBounds.getSouthWest().lng,
-      ne_lat: mapBounds.getNorthEast().lat,
-      ne_lng: mapBounds.getNorthEast().lng,
-    });
-  }, [isAdmin, onBoundsChange]);
-
-  useEffect(() => {
-    if (!mapContainer.current || mapRef.current) return;
-
-    // Initialize map with admin-defined or default bounds
-    const mapBounds = bounds 
-      ? L.latLngBounds(
-          L.latLng(bounds.sw_lat, bounds.sw_lng),
-          L.latLng(bounds.ne_lat, bounds.ne_lng)
-        )
-      : L.latLngBounds(
-          L.latLng(6.5, 68.0),
-          L.latLng(35.5, 97.5)
-        );
-
-    const map = L.map(mapContainer.current, {
-      center: [center.lat, center.lng],
-      zoom: zoom,
-      minZoom: 5,
-      maxZoom: 18,
-      maxBounds: isAdmin ? undefined : mapBounds, // Allow admins to pan freely
-      maxBoundsViscosity: isAdmin ? 0 : 1.0,
-      zoomControl: true,
-      preferCanvas: true,
-    });
-
-    // Ensure marker visuals always sit above tiles
-    map.createPane('markerPane');
-    const pane = map.getPane('markerPane');
-    if (pane) pane.style.zIndex = '650';
-
-    // Use CartoDB dark tiles (free, no API key)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap &copy; CARTO',
-      subdomains: 'abcd',
-      maxZoom: 20,
-    }).addTo(map);
-
-    const featureGroup = L.featureGroup([], { pane: 'markerPane' });
-    featureGroup.addTo(map);
-
-    mapRef.current = map;
-    markerLayerRef.current = featureGroup;
-
-    // Fit to admin-defined bounds if set
-    if (bounds) {
-      map.fitBounds(mapBounds, { animate: false });
-    }
-
-    map.whenReady(() => {
-      requestAnimationFrame(() => {
-        map.invalidateSize();
-        setMapReady(true);
+    const mapBounds = map.getBounds();
+    if (mapBounds) {
+      const sw = mapBounds.getSouthWest();
+      const ne = mapBounds.getNorthEast();
+      onBoundsChange({
+        sw_lat: sw.lat(),
+        sw_lng: sw.lng(),
+        ne_lat: ne.lat(),
+        ne_lng: ne.lng(),
       });
-    });
+    }
+  }, [map, isAdmin, onBoundsChange]);
 
-    return () => {
-      setMapReady(false);
-      markerLayerRef.current = null;
-      boundaryLayerRef.current = null;
-      mapRef.current?.remove();
-      mapRef.current = null;
+  // Create SVG marker icon
+  const createMarkerIcon = useCallback((type: string) => {
+    const color = markerColors[type] || '#ffffff';
+    return {
+      path: google.maps.SymbolPath.CIRCLE,
+      fillColor: color,
+      fillOpacity: 0.85,
+      strokeColor: '#ffffff',
+      strokeWeight: 2,
+      scale: 12,
     };
-  }, [center.lat, center.lng, zoom, bounds, isAdmin]);
+  }, []);
 
-  // Admin bounds tracking
-  useEffect(() => {
-    if (!mapRef.current || !isAdmin) return;
-    
-    mapRef.current.on('moveend', handleMoveEnd);
-    return () => {
-      mapRef.current?.off('moveend', handleMoveEnd);
+  const rectangleBounds = useMemo(() => {
+    if (!bounds) return null;
+    return {
+      north: bounds.ne_lat,
+      south: bounds.sw_lat,
+      east: bounds.ne_lng,
+      west: bounds.sw_lng,
     };
-  }, [isAdmin, handleMoveEnd]);
+  }, [bounds]);
 
-  // Geofence boundary visualization
-  useEffect(() => {
-    if (!mapRef.current || !mapReady) return;
+  const mapOptions = useMemo(() => ({
+    styles: darkMapStyles,
+    disableDefaultUI: false,
+    zoomControl: true,
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: true,
+    restriction: !isAdmin && bounds ? {
+      latLngBounds: {
+        north: bounds.ne_lat,
+        south: bounds.sw_lat,
+        east: bounds.ne_lng,
+        west: bounds.sw_lng,
+      },
+      strictBounds: true,
+    } : undefined,
+  }), [isAdmin, bounds]);
 
-    // Remove existing boundary
-    if (boundaryLayerRef.current) {
-      boundaryLayerRef.current.remove();
-      boundaryLayerRef.current = null;
-    }
+  if (!apiKey) {
+    return (
+      <div className="relative w-full h-full min-h-[300px]">
+        <div className="absolute inset-0 flex items-center justify-center bg-secondary/50 rounded-lg">
+          <div className="text-muted-foreground text-sm">Loading map configuration...</div>
+        </div>
+      </div>
+    );
+  }
 
-    // Show boundary if we have bounds and showGeofenceBoundary is enabled
-    if (showGeofenceBoundary && bounds) {
-      const rectangleBounds = L.latLngBounds(
-        L.latLng(bounds.sw_lat, bounds.sw_lng),
-        L.latLng(bounds.ne_lat, bounds.ne_lng)
-      );
+  if (loadError) {
+    return (
+      <div className="relative w-full h-full min-h-[300px]">
+        <div className="absolute inset-0 flex items-center justify-center bg-destructive/10 rounded-lg">
+          <div className="text-destructive text-sm">Failed to load Google Maps</div>
+        </div>
+      </div>
+    );
+  }
 
-      const boundary = L.rectangle(rectangleBounds, {
-        color: '#00d9ff',
-        weight: 3,
-        opacity: 0.8,
-        fillColor: '#00d9ff',
-        fillOpacity: 0.1,
-        dashArray: '10, 5',
-        interactive: false,
-      });
-
-      boundary.addTo(mapRef.current);
-      boundaryLayerRef.current = boundary;
-
-      console.log('[OperationsMap] Geofence boundary displayed');
-    }
-  }, [bounds, showGeofenceBoundary, mapReady]);
-
-  // Efficient marker rendering with batching
-  useEffect(() => {
-    if (!mapRef.current || !markerLayerRef.current || !mapReady) return;
-
-    const group = markerLayerRef.current;
-    group.clearLayers();
-
-    // Batch marker creation for performance
-    const circleMarkers = markers.map((m) => {
-      const colorConfig = colors[m.type];
-      const fillColor = colorConfig?.fill || '#ffffff';
-
-      const circle = L.circleMarker([m.lat, m.lng], {
-        pane: 'markerPane',
-        radius: 12,
-        color: '#ffffff',
-        weight: 2,
-        fillColor: fillColor,
-        fillOpacity: 0.85,
-      });
-
-      circle.bindTooltip(m.label, {
-        direction: 'top',
-        offset: [0, -12],
-        opacity: 1,
-        className: 'leaflet-tooltip-custom',
-      });
-
-      circle.bindPopup(
-        `<div style="color:#0a0f19;padding:6px;min-width:160px;">
-          <div style="font-weight:700;font-size:13px;">${m.label}</div>
-          <div style="margin-top:3px;text-transform:capitalize;color:${fillColor};font-weight:600;">${m.type}</div>
-        </div>`
-      );
-
-      return circle;
-    });
-
-    // Add all markers at once
-    circleMarkers.forEach(marker => marker.addTo(group));
-
-    console.log(`[OperationsMap] Rendered ${markers.length} markers`);
-  }, [markers, mapReady, colors]);
-
-  return (
-    <div className="relative w-full h-full min-h-[300px]">
-      <div ref={mapContainer} className="absolute inset-0 rounded-lg" />
-      {!mapReady && (
+  if (!isLoaded) {
+    return (
+      <div className="relative w-full h-full min-h-[300px]">
         <div className="absolute inset-0 flex items-center justify-center bg-secondary/50 rounded-lg">
           <div className="text-muted-foreground text-sm">Loading map…</div>
         </div>
-      )}
-      {isAdmin && mapReady && (
-        <div className="absolute top-3 left-3 bg-primary/90 text-primary-foreground text-xs px-2 py-1 rounded z-[1000]">
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full h-full min-h-[300px]">
+      <GoogleMap
+        mapContainerStyle={containerStyle}
+        center={center}
+        zoom={zoom}
+        onLoad={onLoad}
+        onUnmount={onUnmount}
+        onIdle={handleIdle}
+        options={mapOptions}
+      >
+        {/* Geofence boundary */}
+        {showGeofenceBoundary && rectangleBounds && (
+          <Rectangle
+            bounds={rectangleBounds}
+            options={{
+              strokeColor: '#00d9ff',
+              strokeOpacity: 0.8,
+              strokeWeight: 3,
+              fillColor: '#00d9ff',
+              fillOpacity: 0.1,
+              clickable: false,
+            }}
+          />
+        )}
+
+        {/* Markers */}
+        {markers.map((marker) => (
+          <Marker
+            key={marker.id}
+            position={{ lat: marker.lat, lng: marker.lng }}
+            icon={createMarkerIcon(marker.type)}
+            onClick={() => setSelectedMarker(marker)}
+          />
+        ))}
+
+        {/* Info Window */}
+        {selectedMarker && (
+          <InfoWindow
+            position={{ lat: selectedMarker.lat, lng: selectedMarker.lng }}
+            onCloseClick={() => setSelectedMarker(null)}
+          >
+            <div style={{ color: '#0a0f19', padding: '6px', minWidth: '160px' }}>
+              <div style={{ fontWeight: 700, fontSize: '13px' }}>{selectedMarker.label}</div>
+              <div style={{ 
+                marginTop: '3px', 
+                textTransform: 'capitalize', 
+                color: markerColors[selectedMarker.type],
+                fontWeight: 600 
+              }}>
+                {selectedMarker.type}
+              </div>
+            </div>
+          </InfoWindow>
+        )}
+      </GoogleMap>
+
+      {/* Admin indicator */}
+      {isAdmin && (
+        <div className="absolute top-3 left-3 bg-primary/90 text-primary-foreground text-xs px-2 py-1 rounded z-10">
           Pan/zoom to set operational area
         </div>
       )}
+
       {/* Map Legend */}
-      {mapReady && markers.length > 0 && (
-        <div className="absolute bottom-3 right-3 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-border/50 z-[1000]">
+      {markers.length > 0 && (
+        <div className="absolute bottom-3 right-3 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-border/50 z-10">
           <p className="text-xs font-semibold text-foreground mb-2">Legend</p>
           <div className="space-y-1.5">
-            {Object.entries(colors).map(([key, config]) => (
+            {Object.entries(markerColors).map(([key, color]) => (
               <div key={key} className="flex items-center gap-2">
                 <span
                   className="w-3 h-3 rounded-full border-2 border-white"
-                  style={{ backgroundColor: config.fill }}
+                  style={{ backgroundColor: color }}
                 />
-                <span className="text-xs text-muted-foreground">{config.label}</span>
+                <span className="text-xs text-muted-foreground">{markerLabels[key]}</span>
               </div>
             ))}
           </div>

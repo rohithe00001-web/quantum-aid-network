@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { LocationTracker } from '@/components/map/LocationTracker';
+import { VolunteerMiniMap } from '@/components/map/VolunteerMiniMap';
 import { 
   Navigation, MapPin, CheckCircle, Clock, 
   QrCode, Wifi, WifiOff, RefreshCw
@@ -306,14 +307,22 @@ export default function VolunteerDashboard() {
             Live Location Sharing
           </h3>
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 p-4 rounded-lg bg-secondary/30 border border-border/30">
-            <div className="flex-1">
-              <p className="text-foreground font-medium">Share your location on the map</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                When connected, your live GPS location will be visible to operators and admins on the operations map.
-              </p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+            {/* Mini Map */}
+            <VolunteerMiniMap className="h-48 lg:h-56" />
+            
+            {/* Location controls */}
+            <div className="flex flex-col justify-between p-4 rounded-lg bg-secondary/30 border border-border/30">
+              <div>
+                <p className="text-foreground font-medium">Share your location on the map</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  When connected, your live GPS location will be visible to operators and admins on the operations map.
+                </p>
+              </div>
+              <div className="mt-4">
+                <LocationTracker />
+              </div>
             </div>
-            <LocationTracker />
           </div>
 
           <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import { LocationTracker } from '@/components/map/LocationTracker';
 import { 
   Navigation, MapPin, CheckCircle, Clock, 
   QrCode, Wifi, WifiOff, RefreshCw
@@ -266,9 +267,9 @@ export default function VolunteerDashboard() {
 
   const getStatusColor = (s: VolunteerStatus) => {
     switch (s) {
-      case 'idle': return 'bg-gray-500';
-      case 'en_route': return 'bg-quantum-cyan';
-      case 'task_complete': return 'bg-green-500';
+      case 'idle': return 'bg-muted-foreground';
+      case 'en_route': return 'bg-primary';
+      case 'task_complete': return 'bg-success';
     }
   };
 
@@ -298,10 +299,25 @@ export default function VolunteerDashboard() {
           </div>
         </div>
 
-        {/* Status Toggle */}
+        {/* Live Location & Status Toggle */}
         <GlassCard className="p-6" variant="quantum">
           <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-quantum-cyan" />
+            <MapPin className="w-5 h-5 text-primary" />
+            Live Location Sharing
+          </h3>
+
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 p-4 rounded-lg bg-secondary/30 border border-border/30">
+            <div className="flex-1">
+              <p className="text-foreground font-medium">Share your location on the map</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                When connected, your live GPS location will be visible to operators and admins on the operations map.
+              </p>
+            </div>
+            <LocationTracker />
+          </div>
+
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-primary" />
             Status Toggle
           </h3>
 
@@ -318,7 +334,7 @@ export default function VolunteerDashboard() {
               variant={status === 'idle' ? 'default' : 'outline'}
               onClick={() => updateStatus('idle')}
               disabled={isLoading}
-              className={status === 'idle' ? 'bg-gray-600' : ''}
+              className={status === 'idle' ? 'bg-muted-foreground' : ''}
             >
               Idle
             </Button>
@@ -326,7 +342,7 @@ export default function VolunteerDashboard() {
               variant={status === 'en_route' ? 'default' : 'outline'}
               onClick={() => updateStatus('en_route')}
               disabled={isLoading}
-              className={status === 'en_route' ? 'bg-quantum-cyan text-background' : ''}
+              className={status === 'en_route' ? 'bg-primary text-primary-foreground' : ''}
             >
               En Route
             </Button>
@@ -334,7 +350,7 @@ export default function VolunteerDashboard() {
               variant={status === 'task_complete' ? 'default' : 'outline'}
               onClick={() => updateStatus('task_complete')}
               disabled={isLoading}
-              className={status === 'task_complete' ? 'bg-green-600' : ''}
+              className={status === 'task_complete' ? 'bg-success text-success-foreground' : ''}
             >
               Task Complete
             </Button>

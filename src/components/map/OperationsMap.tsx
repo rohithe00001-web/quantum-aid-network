@@ -356,6 +356,18 @@ export function OperationsMap({
         </div>
       )}
 
+      {showVolunteers && (
+        <div className="absolute top-3 left-3 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-border/50 z-10 flex items-center gap-2">
+          <span
+            className="w-3 h-3 rounded-full border-2 border-white animate-pulse"
+            style={{ backgroundColor: markerColors.volunteer }}
+          />
+          <span className="text-xs font-medium text-foreground">
+            {volunteerMarkers.length} Volunteer{volunteerMarkers.length !== 1 ? 's' : ''} Online
+          </span>
+        </div>
+      )}
+
       {allMarkers.length > 0 && (
         <div className="absolute bottom-3 right-3 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-border/50 z-10">
           <p className="text-xs font-semibold text-foreground mb-2">Legend</p>

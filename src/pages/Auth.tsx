@@ -198,12 +198,12 @@ export default function Auth() {
 
           <Button
             type="submit"
-            className="w-full bg-quantum-cyan hover:bg-quantum-cyan/80 text-background font-semibold"
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
             disabled={loading}
           >
             {loading ? (
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
                 {isLogin ? 'Signing In...' : 'Creating Account...'}
               </div>
             ) : (
@@ -223,7 +223,7 @@ export default function Auth() {
                 setIsLogin(!isLogin);
                 setErrors({});
               }}
-              className="ml-2 text-quantum-cyan hover:underline font-medium"
+              className="ml-2 text-primary hover:underline font-medium"
             >
               {isLogin ? 'Sign Up' : 'Sign In'}
             </button>

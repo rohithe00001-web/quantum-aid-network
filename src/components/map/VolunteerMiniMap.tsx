@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { GoogleMap, Marker } from '@react-google-maps/api';
 import { useGoogleMaps } from './GoogleMapsProvider';
-import { MapPinOff } from 'lucide-react';
+import { MapPinOff, RefreshCw, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface VolunteerMiniMapProps {
   className?: string;
@@ -33,29 +34,71 @@ const darkMapStyles = [
   { featureType: 'water', elementType: 'labels.text.stroke', stylers: [{ color: '#0a0f19' }] },
 ];
 
+type LocationStatus = 'loading' | 'success' | 'error' | 'denied' | 'unavailable';
+
 export function VolunteerMiniMap({ className }: VolunteerMiniMapProps) {
   const { isLoaded, loadError } = useGoogleMaps();
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [locationStatus, setLocationStatus] = useState<LocationStatus>('loading');
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [retryCount, setRetryCount] = useState(0);
 
-  useEffect(() => {
-    if (!navigator.geolocation) return;
+  const fetchLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setLocationStatus('unavailable');
+      setErrorMessage('Geolocation is not supported by your browser');
+      return;
+    }
 
-    // Get initial position
+    setLocationStatus('loading');
+    setErrorMessage('');
+
+    // Get initial position with longer timeout for slow devices
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setCurrentLocation({
           lat: position.coords.latitude,
           lng: position.coords.longitude,
         });
+        setLocationStatus('success');
       },
       (error) => {
         console.error('Location error:', error);
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            setLocationStatus('denied');
+            setErrorMessage('Location permission denied. Please allow location access in your browser settings.');
+            break;
+          case error.POSITION_UNAVAILABLE:
+            setLocationStatus('error');
+            setErrorMessage('Location unavailable. Please check your GPS or try again.');
+            break;
+          case error.TIMEOUT:
+            setLocationStatus('error');
+            setErrorMessage('Location request timed out. Tap retry to try again.');
+            break;
+          default:
+            setLocationStatus('error');
+            setErrorMessage('Unable to fetch location. Please try again.');
+        }
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { 
+        enableHighAccuracy: false, // Start with low accuracy for faster response
+        timeout: 15000, // Longer timeout
+        maximumAge: 30000 // Accept cached positions up to 30 seconds old
+      }
     );
+  }, []);
 
-    // Watch position updates
+  useEffect(() => {
+    fetchLocation();
+  }, [fetchLocation, retryCount]);
+
+  // Watch position updates once we have initial location
+  useEffect(() => {
+    if (locationStatus !== 'success' || !navigator.geolocation) return;
+
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
         const newLocation = {
@@ -64,21 +107,29 @@ export function VolunteerMiniMap({ className }: VolunteerMiniMapProps) {
         };
         setCurrentLocation(newLocation);
         
-        // Pan map to new location
         if (map) {
           map.panTo(newLocation);
         }
       },
       (error) => {
         console.error('Location watch error:', error);
+        // Don't update status on watch errors - we already have a location
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+      { 
+        enableHighAccuracy: true, 
+        timeout: 15000, 
+        maximumAge: 10000 
+      }
     );
 
     return () => {
       navigator.geolocation.clearWatch(watchId);
     };
-  }, [map]);
+  }, [map, locationStatus]);
+
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+  };
 
   const onLoad = useCallback((mapInstance: google.maps.Map) => {
     setMap(mapInstance);
@@ -128,16 +179,43 @@ export function VolunteerMiniMap({ className }: VolunteerMiniMapProps) {
     );
   }
 
-  if (!currentLocation) {
+  // Loading state
+  if (locationStatus === 'loading') {
     return (
       <div className={`flex flex-col items-center justify-center bg-secondary/30 rounded-lg border border-border/30 ${className}`}>
-        <MapPinOff className="w-8 h-8 text-muted-foreground mb-2" />
+        <Loader2 className="w-8 h-8 text-primary animate-spin mb-2" />
         <p className="text-sm text-muted-foreground text-center">
-          Location not available
+          Fetching your location...
         </p>
         <p className="text-xs text-muted-foreground text-center mt-1">
-          Enable location to see your position
+          This may take a moment
         </p>
+      </div>
+    );
+  }
+
+  // Error/denied/unavailable states
+  if (locationStatus !== 'success' || !currentLocation) {
+    return (
+      <div className={`flex flex-col items-center justify-center bg-secondary/30 rounded-lg border border-border/30 p-4 ${className}`}>
+        <MapPinOff className="w-8 h-8 text-muted-foreground mb-2" />
+        <p className="text-sm text-muted-foreground text-center">
+          {locationStatus === 'denied' ? 'Location Access Denied' : 'Location Not Available'}
+        </p>
+        <p className="text-xs text-muted-foreground text-center mt-1 max-w-[200px]">
+          {errorMessage || 'Enable location to see your position'}
+        </p>
+        {locationStatus !== 'denied' && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRetry}
+            className="mt-3"
+          >
+            <RefreshCw className="w-3 h-3 mr-1.5" />
+            Retry
+          </Button>
+        )}
       </div>
     );
   }

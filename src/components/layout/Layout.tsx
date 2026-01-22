@@ -1,17 +1,20 @@
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 export function Layout({ children }: LayoutProps) {
+  const isMobile = useIsMobile();
+
   return (
     <div className="min-h-screen bg-background grid-pattern">
-      <Sidebar />
-      <div className="ml-64">
+      {!isMobile && <Sidebar />}
+      <div className={isMobile ? "" : "ml-64"}>
         <Header />
-        <main className="p-6">{children}</main>
+        <main className={isMobile ? "p-4" : "p-6"}>{children}</main>
       </div>
     </div>
   );

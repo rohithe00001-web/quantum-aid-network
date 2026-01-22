@@ -99,22 +99,22 @@ export default function Dashboard() {
     <Layout>
       <div className="space-y-6">
         {/* Page Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground">
               Command Center
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               Real-time disaster response operations overview
             </p>
           </div>
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium text-sm flex items-center gap-2 shadow-lg shadow-primary/20"
+            className="px-3 sm:px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-primary/20 w-full sm:w-auto justify-center"
           >
             <Zap className="w-4 h-4" />
-            Initiate Quantum Solve
+            <span className="hidden xs:inline">Initiate</span> Quantum Solve
           </motion.button>
         </div>
 
@@ -172,7 +172,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="relative h-80">
+            <div className="relative h-60 sm:h-80">
               <OperationsMap markers={mapMarkers} />
             </div>
           </GlassCard>
@@ -225,20 +225,70 @@ export default function Dashboard() {
 
         {/* Recent Operations */}
         <GlassCard className="p-0">
-          <div className="p-4 border-b border-border flex items-center justify-between">
+          <div className="p-3 sm:p-4 border-b border-border flex items-center justify-between">
             <div>
-              <h2 className="font-semibold text-foreground">
+              <h2 className="font-semibold text-foreground text-sm sm:text-base">
                 Recent Operations
               </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">
                 Latest quantum-optimized dispatches
               </p>
             </div>
-            <button className="text-sm text-primary hover:underline">
+            <button className="text-xs sm:text-sm text-primary hover:underline">
               View all
             </button>
           </div>
-          <div className="overflow-x-auto">
+          
+          {/* Mobile Card View */}
+          <div className="sm:hidden p-2 space-y-2">
+            {recentOperations.map((op, i) => (
+              <motion.div
+                key={op.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: i * 0.05 }}
+                className="p-3 rounded-lg border border-border/50 bg-secondary/20"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-foreground">
+                    {op.type}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {op.status === "completed" ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                    ) : (
+                      <StatusIndicator
+                        status={
+                          op.status === "active"
+                            ? "online"
+                            : op.status === "processing"
+                            ? "processing"
+                            : "warning"
+                        }
+                        showPulse={op.status !== "completed"}
+                      />
+                    )}
+                    <span className="text-xs capitalize text-muted-foreground">
+                      {op.status}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    <span className="truncate max-w-[150px]">{op.location}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    <span>{op.time}</span>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+          
+          {/* Desktop Table View */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
